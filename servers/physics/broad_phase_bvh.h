@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -35,11 +35,38 @@
 #include "core/math/bvh.h"
 
 class BroadPhaseBVH : public BroadPhaseSW {
+	template <class T>
+	class UserPairTestFunction {
+	public:
+		static bool user_pair_check(const T *p_a, const T *p_b) {
+			// return false if no collision, decided by masks etc
+			return p_a->test_collision_mask(p_b);
+		}
+	};
 
-	BVH_Manager<CollisionObjectSW, true, 128> bvh;
+	template <class T>
+	class UserCullTestFunction {
+	public:
+		static bool user_cull_check(const T *p_a, const T *p_b) {
+			return true;
+		}
+	};
 
-	static void *_pair_callback(void *, uint32_t, CollisionObjectSW *, int, uint32_t, CollisionObjectSW *, int);
-	static void _unpair_callback(void *, uint32_t, CollisionObjectSW *, int, uint32_t, CollisionObjectSW *, int, void *);
+	enum Tree {
+		TREE_STATIC = 0,
+		TREE_DYNAMIC = 1,
+	};
+
+	enum TreeFlag {
+		TREE_FLAG_STATIC = 1 << TREE_STATIC,
+		TREE_FLAG_DYNAMIC = 1 << TREE_DYNAMIC,
+	};
+
+	BVH_Manager<CollisionObjectSW, 2, true, 128, UserPairTestFunction<CollisionObjectSW>, UserCullTestFunction<CollisionObjectSW>> bvh;
+
+	static void *_pair_callback(void *p_self, uint32_t p_id_A, CollisionObjectSW *p_object_A, int p_subindex_A, uint32_t p_id_B, CollisionObjectSW *p_object_B, int p_subindex_B);
+	static void _unpair_callback(void *p_self, uint32_t p_id_A, CollisionObjectSW *p_object_A, int p_subindex_A, uint32_t p_id_B, CollisionObjectSW *p_object_B, int p_subindex_B, void *p_pair_data);
+	static void *_check_pair_callback(void *p_self, uint32_t p_id_A, CollisionObjectSW *p_object_A, int p_subindex_A, uint32_t p_id_B, CollisionObjectSW *p_object_B, int p_subindex_B, void *p_pair_data);
 
 	PairCallback pair_callback;
 	void *pair_userdata;
@@ -48,8 +75,9 @@ class BroadPhaseBVH : public BroadPhaseSW {
 
 public:
 	// 0 is an invalid ID
-	virtual ID create(CollisionObjectSW *p_object, int p_subindex = 0, const AABB &p_aabb = AABB());
+	virtual ID create(CollisionObjectSW *p_object, int p_subindex = 0, const AABB &p_aabb = AABB(), bool p_static = false);
 	virtual void move(ID p_id, const AABB &p_aabb);
+	virtual void recheck_pairs(ID p_id);
 	virtual void set_static(ID p_id, bool p_static);
 	virtual void remove(ID p_id);
 
@@ -57,9 +85,9 @@ public:
 	virtual bool is_static(ID p_id) const;
 	virtual int get_subindex(ID p_id) const;
 
-	virtual int cull_point(const Vector3 &p_point, CollisionObjectSW **p_results, int p_max_results, int *p_result_indices = NULL);
-	virtual int cull_segment(const Vector3 &p_from, const Vector3 &p_to, CollisionObjectSW **p_results, int p_max_results, int *p_result_indices = NULL);
-	virtual int cull_aabb(const AABB &p_aabb, CollisionObjectSW **p_results, int p_max_results, int *p_result_indices = NULL);
+	virtual int cull_point(const Vector3 &p_point, CollisionObjectSW **p_results, int p_max_results, int *p_result_indices = nullptr);
+	virtual int cull_segment(const Vector3 &p_from, const Vector3 &p_to, CollisionObjectSW **p_results, int p_max_results, int *p_result_indices = nullptr);
+	virtual int cull_aabb(const AABB &p_aabb, CollisionObjectSW **p_results, int p_max_results, int *p_result_indices = nullptr);
 
 	virtual void set_pair_callback(PairCallback p_pair_callback, void *p_userdata);
 	virtual void set_unpair_callback(UnpairCallback p_unpair_callback, void *p_userdata);

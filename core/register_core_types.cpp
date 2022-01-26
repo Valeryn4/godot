@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,6 +34,7 @@
 #include "core/class_db.h"
 #include "core/compressed_translation.h"
 #include "core/core_string_names.h"
+#include "core/crypto/aes_context.h"
 #include "core/crypto/crypto.h"
 #include "core/crypto/hashing_context.h"
 #include "core/engine.h"
@@ -64,6 +65,7 @@
 #include "core/math/triangle_mesh.h"
 #include "core/os/input.h"
 #include "core/os/main_loop.h"
+#include "core/os/time.h"
 #include "core/packed_data_container.h"
 #include "core/path_remap.h"
 #include "core/project_settings.h"
@@ -78,17 +80,17 @@ static Ref<TranslationLoaderPO> resource_format_po;
 static Ref<ResourceFormatSaverCrypto> resource_format_saver_crypto;
 static Ref<ResourceFormatLoaderCrypto> resource_format_loader_crypto;
 
-static _ResourceLoader *_resource_loader = NULL;
-static _ResourceSaver *_resource_saver = NULL;
-static _OS *_os = NULL;
-static _Engine *_engine = NULL;
-static _ClassDB *_classdb = NULL;
-static _Marshalls *_marshalls = NULL;
-static _JSON *_json = NULL;
+static _ResourceLoader *_resource_loader = nullptr;
+static _ResourceSaver *_resource_saver = nullptr;
+static _OS *_os = nullptr;
+static _Engine *_engine = nullptr;
+static _ClassDB *_classdb = nullptr;
+static _Marshalls *_marshalls = nullptr;
+static _JSON *_json = nullptr;
 
-static IP *ip = NULL;
+static IP *ip = nullptr;
 
-static _Geometry *_geometry = NULL;
+static _Geometry *_geometry = nullptr;
 
 extern Mutex _global_mutex;
 
@@ -98,7 +100,6 @@ extern void register_variant_methods();
 extern void unregister_variant_methods();
 
 void register_core_types() {
-
 	MemoryPool::setup();
 
 	StringName::setup();
@@ -159,8 +160,10 @@ void register_core_types() {
 
 	// Crypto
 	ClassDB::register_class<HashingContext>();
+	ClassDB::register_class<AESContext>();
 	ClassDB::register_custom_instance_class<X509Certificate>();
 	ClassDB::register_custom_instance_class<CryptoKey>();
+	ClassDB::register_custom_instance_class<HMACContext>();
 	ClassDB::register_custom_instance_class<Crypto>();
 	ClassDB::register_custom_instance_class<StreamPeerSSL>();
 
@@ -234,7 +237,6 @@ void register_core_settings() {
 }
 
 void register_core_singletons() {
-
 	ClassDB::register_class<ProjectSettings>();
 	ClassDB::register_virtual_class<IP>();
 	ClassDB::register_class<_Geometry>();
@@ -249,6 +251,7 @@ void register_core_singletons() {
 	ClassDB::register_class<InputMap>();
 	ClassDB::register_class<_JSON>();
 	ClassDB::register_class<Expression>();
+	ClassDB::register_class<Time>();
 
 	Engine::get_singleton()->add_singleton(Engine::Singleton("ProjectSettings", ProjectSettings::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("IP", IP::get_singleton()));
@@ -263,10 +266,10 @@ void register_core_singletons() {
 	Engine::get_singleton()->add_singleton(Engine::Singleton("Input", Input::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("InputMap", InputMap::get_singleton()));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("JSON", _JSON::get_singleton()));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("Time", Time::get_singleton()));
 }
 
 void unregister_core_types() {
-
 	memdelete(_resource_loader);
 	memdelete(_resource_saver);
 	memdelete(_os);
@@ -297,8 +300,9 @@ void unregister_core_types() {
 	ResourceLoader::remove_resource_format_loader(resource_format_loader_crypto);
 	resource_format_loader_crypto.unref();
 
-	if (ip)
+	if (ip) {
 		memdelete(ip);
+	}
 
 	ResourceLoader::finalize();
 

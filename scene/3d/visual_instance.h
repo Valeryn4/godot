@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -33,12 +33,11 @@
 
 #include "core/math/face3.h"
 #include "core/rid.h"
-#include "scene/3d/spatial.h"
+#include "scene/3d/cull_instance.h"
 #include "scene/resources/material.h"
 
-class VisualInstance : public Spatial {
-
-	GDCLASS(VisualInstance, Spatial);
+class VisualInstance : public CullInstance {
+	GDCLASS(VisualInstance, CullInstance);
 	OBJ_CATEGORY("3D Visual Nodes");
 
 	RID base;
@@ -49,6 +48,7 @@ class VisualInstance : public Spatial {
 
 protected:
 	void _update_visibility();
+	virtual void _refresh_portal_mode();
 
 	void _notification(int p_what);
 	static void _bind_methods();
@@ -58,7 +58,6 @@ public:
 		FACES_SOLID = 1, // solid geometry
 		FACES_ENCLOSING = 2,
 		FACES_DYNAMIC = 4 // dynamic object geometry
-
 	};
 
 	RID get_instance() const;
@@ -81,7 +80,6 @@ public:
 };
 
 class GeometryInstance : public VisualInstance {
-
 	GDCLASS(GeometryInstance, VisualInstance);
 
 public:
@@ -112,6 +110,7 @@ private:
 	LightmapScale lightmap_scale;
 	ShadowCastingSetting shadow_casting_setting;
 	Ref<Material> material_override;
+	Ref<Material> material_overlay;
 	float lod_min_distance;
 	float lod_max_distance;
 	float lod_min_hysteresis;
@@ -129,9 +128,6 @@ public:
 
 	void set_cast_shadows_setting(ShadowCastingSetting p_shadow_casting_setting);
 	ShadowCastingSetting get_cast_shadows_setting() const;
-
-	void set_bake_cast_shadows(bool p_enabled);
-	bool get_bake_cast_shadows();
 
 	void set_generate_lightmap(bool p_enabled);
 	bool get_generate_lightmap();
@@ -153,6 +149,9 @@ public:
 
 	virtual void set_material_override(const Ref<Material> &p_material);
 	Ref<Material> get_material_override() const;
+
+	virtual void set_material_overlay(const Ref<Material> &p_material);
+	Ref<Material> get_material_overlay() const;
 
 	void set_extra_cull_margin(float p_margin);
 	float get_extra_cull_margin() const;

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -75,6 +75,10 @@ void PluginScriptLanguage::get_reserved_words(List<String> *p_words) const {
 			w++;
 		}
 	}
+}
+
+bool PluginScriptLanguage::is_control_flow_keyword(String p_keyword) const {
+	return false;
 }
 
 void PluginScriptLanguage::get_comment_delimiters(List<String> *p_delimiters) const {
@@ -211,7 +215,7 @@ void PluginScriptLanguage::get_public_functions(List<MethodInfo> *p_functions) c
 	}
 }
 
-void PluginScriptLanguage::get_public_constants(List<Pair<String, Variant> > *p_constants) const {
+void PluginScriptLanguage::get_public_constants(List<Pair<String, Variant>> *p_constants) const {
 	// TODO: provide this statically in `godot_pluginscript_language_desc` ?
 	if (_desc.get_public_constants) {
 		Dictionary constants;

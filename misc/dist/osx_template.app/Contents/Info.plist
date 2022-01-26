@@ -24,10 +24,7 @@
 	<string>$signature</string>
 	<key>CFBundleVersion</key>
 	<string>$version</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>$microphone_usage_description</string>
-	<key>NSCameraUsageDescription</key>
-	<string>$camera_usage_description</string>
+$usage_descriptions
 	<key>NSHumanReadableCopyright</key>
 	<string>$copyright</string>
 	<key>CFBundleSupportedPlatforms</key>
@@ -36,14 +33,16 @@
 	</array>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.$app_category</string>
 	<key>LSMinimumSystemVersion</key>
-	<string>10.9</string>
+	<string>10.12</string>
 	<key>LSMinimumSystemVersionByArchitecture</key>
 	<dict>
 		<key>x86_64</key>
-		<string>10.9</string>
+		<string>10.12</string>
 	</dict>
 	<key>NSHighResolutionCapable</key>
-	$highres
+$highres
 </dict>
 </plist>

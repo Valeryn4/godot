@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -39,7 +39,6 @@
 class SyntaxHighlighter;
 
 class TextEdit : public Control {
-
 	GDCLASS(TextEdit, Control);
 
 public:
@@ -48,7 +47,6 @@ public:
 	};
 
 	struct ColorRegion {
-
 		Color color;
 		String begin_key;
 		String end_key;
@@ -66,7 +64,6 @@ public:
 	class Text {
 	public:
 		struct ColorRegionInfo {
-
 			int region;
 			bool end;
 			ColorRegionInfo() {
@@ -112,12 +109,14 @@ public:
 		void set_indent_size(int p_indent_size);
 		void set_font(const Ref<Font> &p_font);
 		void set_color_regions(const Vector<ColorRegion> *p_regions) { color_regions = p_regions; }
+
 		int get_line_width(int p_line) const;
 		int get_max_width(bool p_exclude_hidden = false) const;
 		int get_char_width(CharType c, CharType next_c, int px) const;
 		void set_line_wrap_amount(int p_line, int p_wrap_amount) const;
 		int get_line_wrap_amount(int p_line) const;
 		const Map<int, ColorRegionInfo> &get_color_region_info(int p_line) const;
+
 		void set(int p_line, const String &p_text);
 		void set_marked(int p_line, bool p_marked) { text.write[p_line].marked = p_marked; }
 		bool is_marked(int p_line) const { return text[p_line].marked; }
@@ -141,14 +140,19 @@ public:
 		bool has_info_icon(int p_line) const { return text[p_line].has_info; }
 		const Ref<Texture> &get_info_icon(int p_line) const { return text[p_line].info_icon; }
 		const String &get_info(int p_line) const { return text[p_line].info; }
+
 		void insert(int p_at, const String &p_text);
 		void remove(int p_at);
+
 		int size() const { return text.size(); }
+
 		void clear();
 		void clear_width_cache();
 		void clear_wrap_cache();
 		void clear_info_icons();
+
 		_FORCE_INLINE_ const String &operator[](int p_line) const { return text[p_line].data; }
+
 		Text() { indent_size = 4; }
 	};
 
@@ -168,7 +172,6 @@ private:
 	} cursor;
 
 	struct Selection {
-
 		enum Mode {
 
 			MODE_NONE,
@@ -207,7 +210,6 @@ private:
 	} selection;
 
 	struct Cache {
-
 		Ref<Texture> tab_icon;
 		Ref<Texture> space_icon;
 		Ref<Texture> can_fold_icon;
@@ -230,6 +232,7 @@ private:
 		Color font_color_selected;
 		Color font_color_readonly;
 		Color keyword_color;
+		Color control_flow_keyword_color;
 		Color number_color;
 		Color function_color;
 		Color member_variable_color;
@@ -256,7 +259,6 @@ private:
 		int info_gutter_width;
 		int minimap_width;
 		Cache() {
-
 			row_height = 0;
 			line_spacing = 0;
 			line_number_w = 0;
@@ -268,10 +270,9 @@ private:
 	} cache;
 
 	Map<int, int> color_region_cache;
-	Map<int, Map<int, HighlighterInfo> > syntax_highlighting_cache;
+	Map<int, Map<int, HighlighterInfo>> syntax_highlighting_cache;
 
 	struct TextOperation {
-
 		enum Type {
 			TYPE_NONE,
 			TYPE_INSERT,
@@ -342,7 +343,6 @@ private:
 	uint32_t version;
 	uint32_t saved_version;
 
-	int max_chars;
 	bool readonly;
 	bool syntax_coloring;
 	bool indent_using_spaces;
@@ -370,8 +370,9 @@ private:
 	bool undo_enabled;
 	bool line_numbers;
 	bool line_numbers_zero_padded;
-	bool line_length_guideline;
-	int line_length_guideline_col;
+	bool line_length_guidelines;
+	int line_length_guideline_soft_col;
+	int line_length_guideline_hard_col;
 	bool draw_bookmark_gutter;
 	bool draw_breakpoint_gutter;
 	int breakpoint_gutter_width;
@@ -398,6 +399,7 @@ private:
 	bool smooth_scroll_enabled;
 	bool scrolling;
 	bool dragging_selection;
+	bool hovering_minimap;
 	bool dragging_minimap;
 	bool can_drag_minimap;
 	bool minimap_clicked;
@@ -409,6 +411,7 @@ private:
 	String highlighted_word;
 
 	uint64_t last_dblclk;
+	Vector2 last_dblclk_pos;
 
 	Timer *idle_detect;
 	Timer *click_select_held;
@@ -416,7 +419,7 @@ private:
 	VScrollBar *v_scroll;
 	bool updating_scrolls;
 
-	Object *tooltip_obj;
+	ObjectID tooltip_obj_id;
 	StringName tooltip_func;
 	Variant tooltip_ud;
 
@@ -471,7 +474,6 @@ private:
 	int get_column_x_offset(int p_char, String p_str) const;
 
 	void adjust_viewport_to_cursor();
-	double get_scroll_line_diff() const;
 	void _scroll_moved(double);
 	void _update_scrollbars();
 	void _v_scroll_input();
@@ -481,6 +483,7 @@ private:
 	void _update_selection_mode_word();
 	void _update_selection_mode_line();
 
+	void _update_minimap_hover();
 	void _update_minimap_click();
 	void _update_minimap_drag();
 	void _scroll_up(real_t p_delta);
@@ -508,6 +511,15 @@ private:
 
 	void _push_current_op();
 
+	/* Line and character position. */
+	struct LineDrawingCache {
+		int y_offset = 0;
+		Vector<int> first_visible_char;
+		Vector<int> last_visible_char;
+	};
+
+	Map<int, LineDrawingCache> line_drawing_cache;
+
 	/* super internal api, undo/redo builds on it */
 
 	void _base_insert_text(int p_line, int p_char, const String &p_text, int &r_end_line, int &r_end_column);
@@ -532,7 +544,7 @@ private:
 protected:
 	virtual String get_tooltip(const Point2 &p_pos) const;
 
-	void _insert_text(int p_line, int p_char, const String &p_text, int *r_end_line = NULL, int *r_end_char = NULL);
+	void _insert_text(int p_line, int p_char, const String &p_text, int *r_end_line = nullptr, int *r_end_char = nullptr);
 	void _remove_text(int p_from_line, int p_from_column, int p_to_line, int p_to_column);
 	void _insert_text_at_cursor(const String &p_text);
 	void _gui_input(const Ref<InputEvent> &p_gui_input);
@@ -590,21 +602,29 @@ public:
 	void set_text(String p_text);
 	void insert_text_at_cursor(const String &p_text);
 	void insert_at(const String &p_text, int at);
+
 	int get_line_count() const;
+
+	int get_line_width(int p_line, int p_wrap_index = -1) const;
+	int get_line_height() const;
+
 	void set_line_as_marked(int p_line, bool p_marked);
 	void set_line_as_bookmark(int p_line, bool p_bookmark);
 	bool is_line_set_as_bookmark(int p_line) const;
 	void get_bookmarks(List<int> *p_bookmarks) const;
 	Array get_bookmarks_array() const;
+
 	void set_line_as_breakpoint(int p_line, bool p_breakpoint);
 	bool is_line_set_as_breakpoint(int p_line) const;
-	void set_executing_line(int p_line);
-	void clear_executing_line();
-	void set_line_as_safe(int p_line, bool p_safe);
-	bool is_line_set_as_safe(int p_line) const;
 	void get_breakpoints(List<int> *p_breakpoints) const;
 	Array get_breakpoints_array() const;
 	void remove_breakpoints();
+
+	void set_executing_line(int p_line);
+	void clear_executing_line();
+
+	void set_line_as_safe(int p_line, bool p_safe);
+	bool is_line_set_as_safe(int p_line) const;
 
 	void set_line_info_icon(int p_line, Ref<Texture> p_icon, String p_info = "");
 	void clear_info_icons();
@@ -675,9 +695,6 @@ public:
 	void set_readonly(bool p_readonly);
 	bool is_readonly() const;
 
-	void set_max_chars(int p_max_chars);
-	int get_max_chars() const;
-
 	void set_wrap_enabled(bool p_wrap_enabled);
 	bool is_wrap_enabled() const;
 
@@ -710,8 +727,15 @@ public:
 	String get_word_under_cursor() const;
 	String get_word_at_pos(const Vector2 &p_pos) const;
 
+	/* Line and character position. */
+	Point2 get_pos_at_line_column(int p_line, int p_column) const;
+	Rect2 get_rect_at_line_column(int p_line, int p_column) const;
+	Point2 get_line_column_at_pos(const Point2 &p_pos) const;
+
 	bool search(const String &p_key, uint32_t p_search_flags, int p_from_line, int p_from_column, int &r_line, int &r_column) const;
 
+	bool has_undo() const;
+	bool has_redo() const;
 	void undo();
 	void redo();
 	void clear_undo_history();
@@ -768,8 +792,9 @@ public:
 
 	void set_line_numbers_zero_padded(bool p_zero_padded);
 
-	void set_show_line_length_guideline(bool p_show);
-	void set_line_length_guideline_column(int p_column);
+	void set_show_line_length_guidelines(bool p_show);
+	void set_line_length_guideline_soft_column(int p_column);
+	void set_line_length_guideline_hard_column(int p_column);
 
 	void set_bookmark_gutter_enabled(bool p_draw);
 	bool is_bookmark_gutter_enabled() const;
@@ -791,6 +816,8 @@ public:
 
 	void set_info_gutter_width(int p_gutter_width);
 	int get_info_gutter_width() const;
+
+	int get_total_gutter_width() const;
 
 	void set_draw_minimap(bool p_draw);
 	bool is_drawing_minimap() const;

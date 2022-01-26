@@ -43,8 +43,8 @@ Source: https://github.com/godotengine/godot
 
 Files: *
 Comment: Godot Engine
-Copyright: 2007-2021, Juan Linietsky, Ariel Manzur.
- 2014-2021, Godot Engine contributors.
+Copyright: 2007-2022, Juan Linietsky, Ariel Manzur.
+ 2014-2022, Godot Engine contributors.
 License: Expat
 
 Files: ./icon.png
@@ -55,11 +55,19 @@ Comment: Godot Engine logo
 Copyright: 2017, Andrea Calabró
 License: CC-BY-4.0
 
+Files: ./core/math/convex_hull.cpp
+ ./core/math/convex_hull.h
+Comment: Bullet Continuous Collision Detection and Physics Library
+Copyright: 2011, Ole Kniemeyer, MAXON, www.maxon.net
+ 2007-2022, Juan Linietsky, Ariel Manzur.
+ 2014-2022, Godot Engine contributors.
+License: Expat and Zlib
+
 Files: ./modules/fbx/fbx_parser/
 Comment: Open Asset Import Library (FBX parser)
 Copyright: 2006-2020, assimp team
- 2007-2021, Juan Linietsky, Ariel Manzur.
- 2014-2021, Godot Engine contributors.
+ 2007-2022, Juan Linietsky, Ariel Manzur.
+ 2014-2022, Godot Engine contributors.
 License: BSD-3-clause
 
 Files: ./platform/android/java/lib/aidl/com/android/vending/licensing/
@@ -84,8 +92,8 @@ Files: ./platform/android/power_android.cpp
  ./platform/x11/power_x11.cpp
 Comment: Simple DirectMedia Layer
 Copyright: 1997-2017, Sam Lantinga
- 2007-2021, Juan Linietsky, Ariel Manzur.
- 2014-2021, Godot Engine contributors.
+ 2007-2022, Juan Linietsky, Ariel Manzur.
+ 2014-2022, Godot Engine contributors.
 License: Expat and Zlib
 
 Files: ./servers/physics/collision_solver_sat.cpp
@@ -103,18 +111,20 @@ Files: ./servers/physics/gjk_epa.cpp
  ./servers/physics/joints/pin_joint_sw.h
  ./servers/physics/joints/slider_joint_sw.cpp
  ./servers/physics/joints/slider_joint_sw.h
+ ./servers/physics/shape_sw.cpp
+ ./servers/physics/shape_sw.h
 Comment: Bullet Continuous Collision Detection and Physics Library
 Copyright: 2003-2008, Erwin Coumans
- 2007-2021, Juan Linietsky, Ariel Manzur.
- 2014-2021, Godot Engine contributors.
+ 2007-2022, Juan Linietsky, Ariel Manzur.
+ 2014-2022, Godot Engine contributors.
 License: Expat and Zlib
 
 Files: ./servers/physics/joints/cone_twist_joint_sw.cpp
  ./servers/physics/joints/cone_twist_joint_sw.h
 Comment: Bullet Continuous Collision Detection and Physics Library
 Copyright: 2007, Starbreeze Studios
- 2007-2021, Juan Linietsky, Ariel Manzur.
- 2014-2021, Godot Engine contributors.
+ 2007-2022, Juan Linietsky, Ariel Manzur.
+ 2014-2022, Godot Engine contributors.
 License: Expat and Zlib
 
 Files: ./thirdparty/bullet/
@@ -132,6 +142,11 @@ Comment: Convection Texture Tools Stand-Alone Kernels
 Copyright: 2018, Eric Lasota
  2018, Microsoft Corp.
 License: Expat
+
+Files: ./thirdparty/embree/
+Comment: Embree
+Copyright: 2009-2021, Intel Corporation
+License: Apache-2.0
 
 Files: ./thirdparty/enet/
 Comment: ENet
@@ -161,7 +176,7 @@ License: Expat and Bitstream Vera Fonts Copyright
 
 Files: ./thirdparty/freetype/
 Comment: The FreeType Project
-Copyright: 1996-2020, David Turner, Robert Wilhelm, and Werner Lemberg.
+Copyright: 1996-2021, David Turner, Robert Wilhelm, and Werner Lemberg.
 License: FTL
 
 Files: ./thirdparty/glad/
@@ -331,8 +346,8 @@ License: BSD-3-clause
 
 Files: ./thirdparty/pcre2/
 Comment: PCRE2
-Copyright: 1997-2020, University of Cambridge
- 2009-2020, Zoltan Herczeg
+Copyright: 1997-2021, University of Cambridge
+ 2009-2021, Zoltan Herczeg
 License: BSD-3-clause
 
 Files: ./thirdparty/pvrtccompressor/
@@ -345,6 +360,11 @@ Comment: Recast
 Copyright: 2009, Mikko Mononen
 License: Zlib
 
+Files: ./thirdparty/rvo2/
+Comment: RVO2
+Copyright: 2016, University of North Carolina at Chapel Hill
+License: Apache-2.0
+
 Files: ./thirdparty/squish/
 Comment: libSquish
 Copyright: 2006, Simon Brown
@@ -352,7 +372,7 @@ License: Expat
 
 Files: ./thirdparty/tinyexr/
 Comment: TinyEXR
-Copyright: 2014-2020, Syoyo Fujita
+Copyright: 2014-2021, Syoyo Fujita
   2002, Industrial Light & Magic, a division of Lucas Digital Ltd. LLC
 License: BSD-3-clause
 
@@ -381,7 +401,7 @@ License: Zlib
 
 Files: ./thirdparty/zstd/
 Comment: Zstandard
-Copyright: 2016-2020, Facebook, Inc.
+Copyright: 2016-2021, Facebook, Inc.
 License: BSD-3-clause
 
 

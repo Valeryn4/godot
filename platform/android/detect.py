@@ -26,7 +26,7 @@ def get_opts():
     return [
         ("ANDROID_NDK_ROOT", "Path to the Android NDK", get_android_ndk_root()),
         ("ANDROID_SDK_ROOT", "Path to the Android SDK", get_android_sdk_root()),
-        ("ndk_platform", 'Target platform (android-<api>, e.g. "android-18")', "android-18"),
+        ("ndk_platform", 'Target platform (android-<api>, e.g. "android-19")', "android-19"),
         EnumVariable("android_arch", "Target architecture", "armv7", ("armv7", "arm64v8", "x86", "x86_64")),
         BoolVariable("android_neon", "Enable NEON support (armv7 only)", True),
     ]
@@ -156,7 +156,7 @@ def configure(env):
         abi_subpath = "i686-linux-android"
         arch_subpath = "x86"
         env["x86_libtheora_opt_gcc"] = True
-    if env["android_arch"] == "x86_64":
+    elif env["android_arch"] == "x86_64":
         if get_platform(env["ndk_platform"]) < 21:
             print(
                 "WARNING: android_arch=x86_64 is not supported by ndk_platform lower than android-21; setting ndk_platform=android-21"
@@ -202,12 +202,10 @@ def configure(env):
         env.Append(CPPDEFINES=["NDEBUG"])
         if can_vectorize:
             env.Append(CCFLAGS=["-ftree-vectorize"])
-        if env["target"] == "release_debug":
-            env.Append(CPPDEFINES=["DEBUG_ENABLED"])
     elif env["target"] == "debug":
         env.Append(LINKFLAGS=["-O0"])
         env.Append(CCFLAGS=["-O0", "-g", "-fno-limit-debug-info"])
-        env.Append(CPPDEFINES=["_DEBUG", "DEBUG_ENABLED"])
+        env.Append(CPPDEFINES=["_DEBUG"])
         env.Append(CPPFLAGS=["-UNDEBUG"])
 
     # Compiler configuration
@@ -248,7 +246,7 @@ def configure(env):
     env["RANLIB"] = tools_path + "/ranlib"
     env["AS"] = tools_path + "/as"
 
-    common_opts = ["-fno-integrated-as", "-gcc-toolchain", gcc_toolchain_path]
+    common_opts = ["-gcc-toolchain", gcc_toolchain_path]
 
     # Compile flags
 
@@ -277,6 +275,9 @@ def configure(env):
         CCFLAGS="-fpic -ffunction-sections -funwind-tables -fstack-protector-strong -fvisibility=hidden -fno-strict-aliasing".split()
     )
     env.Append(CPPDEFINES=["NO_STATVFS", "GLES_ENABLED"])
+
+    if get_platform(env["ndk_platform"]) >= 24:
+        env.Append(CPPDEFINES=[("_FILE_OFFSET_BITS", 64)])
 
     env["neon_enabled"] = False
     if env["android_arch"] == "x86":

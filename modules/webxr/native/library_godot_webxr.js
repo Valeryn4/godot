@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,9 +32,6 @@ const GodotWebXR = {
 	$GodotWebXR__deps: ['$Browser', '$GL', '$GodotRuntime'],
 	$GodotWebXR: {
 		gl: null,
-
-		texture_ids: [null, null],
-		textures: [null, null],
 
 		session: null,
 		space: null,
@@ -72,10 +69,8 @@ const GodotWebXR = {
 			// enabled or disabled. When using the WebXR API Emulator, this
 			// gets picked up automatically, however, in the Oculus Browser
 			// on the Quest, we need to pause and resume the main loop.
-			Browser.pauseAsyncCallbacks();
 			Browser.mainLoop.pause();
 			window.setTimeout(function () {
-				Browser.resumeAsyncCallbacks();
 				Browser.mainLoop.resume();
 			}, 0);
 		},
@@ -191,7 +186,7 @@ const GodotWebXR = {
 		// the first element, and the right hand is the second element, and any
 		// others placed at the 3rd position and up.
 		sampleControllers: () => {
-			if (!GodotWebXR.session || !GodotWebXR.frame) {
+			if (!GodotWebXR.session) {
 				return;
 			}
 
@@ -284,11 +279,12 @@ const GodotWebXR = {
 				}
 			});
 
-			['selectstart', 'select', 'selectend', 'squeezestart', 'squeeze', 'squeezeend'].forEach((input_event) => {
+			['selectstart', 'selectend', 'select', 'squeezestart', 'squeezeend', 'squeeze'].forEach((input_event, index) => {
 				session.addEventListener(input_event, function (evt) {
-					const c_str = GodotRuntime.allocString(input_event);
-					oninputevent(c_str, GodotWebXR.getControllerId(evt.inputSource));
-					GodotRuntime.free(c_str);
+					// Some controllers won't exist until an event occurs,
+					// for example, with "screen" input sources (touch).
+					GodotWebXR.sampleControllers();
+					oninputevent(index, GodotWebXR.getControllerId(evt.inputSource));
 				});
 			});
 
@@ -373,22 +369,6 @@ const GodotWebXR = {
 				.catch((e) => { });
 		}
 
-		// Clean-up the textures we allocated for each view.
-		const gl = GodotWebXR.gl;
-		for (let i = 0; i < GodotWebXR.textures.length; i++) {
-			const texture = GodotWebXR.textures[i];
-			if (texture !== null) {
-				gl.deleteTexture(texture);
-			}
-			GodotWebXR.textures[i] = null;
-
-			const texture_id = GodotWebXR.texture_ids[i];
-			if (texture_id !== null) {
-				GL.textures[texture_id] = null;
-			}
-			GodotWebXR.texture_ids[i] = null;
-		}
-
 		GodotWebXR.session = null;
 		GodotWebXR.space = null;
 		GodotWebXR.frame = null;
@@ -463,50 +443,9 @@ const GodotWebXR = {
 		return buf;
 	},
 
-	godot_webxr_get_external_texture_for_eye__proxy: 'sync',
-	godot_webxr_get_external_texture_for_eye__sig: 'ii',
-	godot_webxr_get_external_texture_for_eye: function (p_eye) {
-		if (!GodotWebXR.session) {
-			return 0;
-		}
-
-		const view_index = (p_eye === 2 /* ARVRInterface::EYE_RIGHT */) ? 1 : 0;
-		if (GodotWebXR.texture_ids[view_index]) {
-			return GodotWebXR.texture_ids[view_index];
-		}
-
-		// Check pose separately and after returning the cached texture id,
-		// because we won't get a pose in some cases if we lose tracking, and
-		// we don't want to return 0 just because tracking was lost.
-		if (!GodotWebXR.pose) {
-			return 0;
-		}
-
-		const glLayer = GodotWebXR.session.renderState.baseLayer;
-		const view = GodotWebXR.pose.views[view_index];
-		const viewport = glLayer.getViewport(view);
-		const gl = GodotWebXR.gl;
-
-		const texture = gl.createTexture();
-		gl.bindTexture(gl.TEXTURE_2D, texture);
-		gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, viewport.width, viewport.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-		gl.bindTexture(gl.TEXTURE_2D, null);
-
-		const texture_id = GL.getNewId(GL.textures);
-		GL.textures[texture_id] = texture;
-		GodotWebXR.textures[view_index] = texture;
-		GodotWebXR.texture_ids[view_index] = texture_id;
-		return texture_id;
-	},
-
 	godot_webxr_commit_for_eye__proxy: 'sync',
-	godot_webxr_commit_for_eye__sig: 'vi',
-	godot_webxr_commit_for_eye: function (p_eye) {
+	godot_webxr_commit_for_eye__sig: 'vii',
+	godot_webxr_commit_for_eye: function (p_eye, p_texture_id) {
 		if (!GodotWebXR.session || !GodotWebXR.pose) {
 			return;
 		}
@@ -524,7 +463,7 @@ const GodotWebXR = {
 		gl.bindFramebuffer(gl.FRAMEBUFFER, glLayer.framebuffer);
 		gl.viewport(viewport.x, viewport.y, viewport.width, viewport.height);
 
-		GodotWebXR.blitTexture(gl, GodotWebXR.textures[view_index]);
+		GodotWebXR.blitTexture(gl, GL.textures[p_texture_id]);
 
 		// Restore state.
 		gl.bindFramebuffer(gl.FRAMEBUFFER, orig_framebuffer);
@@ -632,6 +571,35 @@ const GodotWebXR = {
 			GodotRuntime.setHeapValue(buf + 4 + (i * 4), value, 'float');
 		}
 		return buf;
+	},
+
+	godot_webxr_get_controller_target_ray_mode__proxy: 'sync',
+	godot_webxr_get_controller_target_ray_mode__sig: 'ii',
+	godot_webxr_get_controller_target_ray_mode: function (p_controller) {
+		if (p_controller < 0 || p_controller >= GodotWebXR.controllers.length) {
+			return 0;
+		}
+
+		const controller = GodotWebXR.controllers[p_controller];
+		if (!controller) {
+			return 0;
+		}
+
+		switch (controller.targetRayMode) {
+		case 'gaze':
+			return 1;
+
+		case 'tracked-pointer':
+			return 2;
+
+		case 'screen':
+			return 3;
+
+		default:
+			break;
+		}
+
+		return 0;
 	},
 
 	godot_webxr_get_visibility_state__proxy: 'sync',

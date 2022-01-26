@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -53,7 +53,6 @@
 namespace GDMonoUtils {
 
 MonoObject *unmanaged_get_managed(Object *unmanaged) {
-
 	if (!unmanaged)
 		return NULL;
 
@@ -367,7 +366,7 @@ void debug_send_unhandled_exception_error(MonoException *p_exc) {
 	if (!ScriptDebugger::get_singleton()) {
 #ifdef TOOLS_ENABLED
 		if (Engine::get_singleton()->is_editor_hint()) {
-			ERR_PRINTS(GDMonoUtils::get_exception_name_and_message(p_exc));
+			ERR_PRINT(GDMonoUtils::get_exception_name_and_message(p_exc));
 		}
 #endif
 		return;
@@ -445,7 +444,7 @@ void set_pending_exception(MonoException *p_exc) {
 	}
 
 	if (!mono_runtime_set_pending_exception(p_exc, false)) {
-		ERR_PRINTS("Exception thrown from managed code, but it could not be set as pending:");
+		ERR_PRINT("Exception thrown from managed code, but it could not be set as pending:");
 		GDMonoUtils::debug_print_unhandled_exception(p_exc);
 	}
 #endif
@@ -457,13 +456,6 @@ current_invoke_count = 0;
 MonoObject *runtime_invoke(MonoMethod *p_method, void *p_obj, void **p_params, MonoException **r_exc) {
 	GD_MONO_BEGIN_RUNTIME_INVOKE;
 	MonoObject *ret = mono_runtime_invoke(p_method, p_obj, p_params, (MonoObject **)r_exc);
-	GD_MONO_END_RUNTIME_INVOKE;
-	return ret;
-}
-
-MonoObject *runtime_invoke_array(MonoMethod *p_method, void *p_obj, MonoArray *p_params, MonoException **r_exc) {
-	GD_MONO_BEGIN_RUNTIME_INVOKE;
-	MonoObject *ret = mono_runtime_invoke_array(p_method, p_obj, p_params, (MonoObject **)r_exc);
 	GD_MONO_END_RUNTIME_INVOKE;
 	return ret;
 }
@@ -525,9 +517,10 @@ namespace Marshal {
 
 #ifdef MONO_GLUE_ENABLED
 #ifdef TOOLS_ENABLED
-#define NO_GLUE_RET(m_ret)                                                   \
-	{                                                                        \
-		if (!GDMonoCache::cached_data.godot_api_cache_updated) return m_ret; \
+#define NO_GLUE_RET(m_ret)                                     \
+	{                                                          \
+		if (!GDMonoCache::cached_data.godot_api_cache_updated) \
+			return m_ret;                                      \
 	}
 #else
 #define NO_GLUE_RET(m_ret) \
@@ -592,6 +585,12 @@ bool type_is_generic_idictionary(MonoReflectionType *p_reftype) {
 	MonoBoolean res = CACHED_METHOD_THUNK(MarshalUtils, TypeIsGenericIDictionary).invoke(p_reftype, &exc);
 	UNHANDLED_EXCEPTION(exc);
 	return (bool)res;
+}
+
+void get_generic_type_definition(MonoReflectionType *p_reftype, MonoReflectionType **r_generic_reftype) {
+	MonoException *exc = nullptr;
+	CACHED_METHOD_THUNK(MarshalUtils, GetGenericTypeDefinition).invoke(p_reftype, r_generic_reftype, &exc);
+	UNHANDLED_EXCEPTION(exc);
 }
 
 void array_get_element_type(MonoReflectionType *p_array_reftype, MonoReflectionType **r_elem_reftype) {

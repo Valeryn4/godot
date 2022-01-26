@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -39,7 +39,6 @@
 #include "scene/main/timer.h"
 
 class HTTPRequest : public Node {
-
 	GDCLASS(HTTPRequest, Node);
 
 public:
@@ -70,7 +69,7 @@ private:
 	bool validate_ssl;
 	bool use_ssl;
 	HTTPClient::Method method;
-	String request_data;
+	PoolVector<uint8_t> request_data;
 
 	bool request_sent;
 	Ref<HTTPClient> client;
@@ -109,7 +108,7 @@ private:
 
 	Thread thread;
 
-	void _request_done(int p_status, int p_code, const PoolStringArray &headers, const PoolByteArray &p_data);
+	void _request_done(int p_status, int p_code, const PoolStringArray &p_headers, const PoolByteArray &p_data);
 	static void _thread_func(void *p_userdata);
 
 protected:
@@ -118,6 +117,7 @@ protected:
 
 public:
 	Error request(const String &p_url, const Vector<String> &p_custom_headers = Vector<String>(), bool p_ssl_validate_domain = true, HTTPClient::Method p_method = HTTPClient::METHOD_GET, const String &p_request_data = ""); //connects to a full url and perform request
+	Error request_raw(const String &p_url, const Vector<String> &p_custom_headers = Vector<String>(), bool p_ssl_validate_domain = true, HTTPClient::Method p_method = HTTPClient::METHOD_GET, const PoolVector<uint8_t> &p_request_data_raw = PoolVector<uint8_t>()); //connects to a full url and perform request
 	void cancel_request();
 	HTTPClient::Status get_http_client_status() const;
 
@@ -145,6 +145,10 @@ public:
 
 	int get_downloaded_bytes() const;
 	int get_body_size() const;
+
+	// Use empty string or -1 to unset.
+	void set_http_proxy(const String &p_host, int p_port);
+	void set_https_proxy(const String &p_host, int p_port);
 
 	HTTPRequest();
 	~HTTPRequest();

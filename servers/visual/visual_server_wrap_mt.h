@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -37,7 +37,6 @@
 #include "servers/visual_server.h"
 
 class VisualServerWrapMT : public VisualServer {
-
 	// the real visual server
 	mutable VisualServer *visual_server;
 
@@ -131,6 +130,8 @@ public:
 	FUNC2SC(shader_get_custom_defines, RID, Vector<String> *)
 	FUNC2(shader_remove_custom_define, RID, const String &)
 
+	FUNC1(set_shader_async_hidden_forbidden, bool)
+
 	/* COMMON MATERIAL API */
 
 	FUNCRID(material)
@@ -150,7 +151,7 @@ public:
 
 	FUNCRID(mesh)
 
-	FUNC10(mesh_add_surface, RID, uint32_t, PrimitiveType, const PoolVector<uint8_t> &, int, const PoolVector<uint8_t> &, int, const AABB &, const Vector<PoolVector<uint8_t> > &, const Vector<AABB> &)
+	FUNC10(mesh_add_surface, RID, uint32_t, PrimitiveType, const PoolVector<uint8_t> &, int, const PoolVector<uint8_t> &, int, const AABB &, const Vector<PoolVector<uint8_t>> &, const Vector<AABB> &)
 
 	FUNC2(mesh_set_blend_shape_count, RID, int)
 	FUNC1RC(int, mesh_get_blend_shape_count, RID)
@@ -173,7 +174,7 @@ public:
 	FUNC2RC(PrimitiveType, mesh_surface_get_primitive_type, RID, int)
 
 	FUNC2RC(AABB, mesh_surface_get_aabb, RID, int)
-	FUNC2RC(Vector<PoolVector<uint8_t> >, mesh_surface_get_blend_shapes, RID, int)
+	FUNC2RC(Vector<PoolVector<uint8_t>>, mesh_surface_get_blend_shapes, RID, int)
 	FUNC2RC(Vector<AABB>, mesh_surface_get_skeleton_aabb, RID, int)
 
 	FUNC2(mesh_remove_surface, RID, int)
@@ -417,7 +418,9 @@ public:
 	FUNC2(viewport_set_msaa, RID, ViewportMSAA)
 	FUNC2(viewport_set_use_fxaa, RID, bool)
 	FUNC2(viewport_set_use_debanding, RID, bool)
+	FUNC2(viewport_set_sharpen_intensity, RID, float)
 	FUNC2(viewport_set_hdr, RID, bool)
+	FUNC2(viewport_set_use_32_bpc_depth, RID, bool)
 	FUNC2(viewport_set_usage, RID, ViewportUsage)
 
 	//this passes directly to avoid stalling, but it's pretty dangerous, so don't call after freeing a viewport
@@ -445,7 +448,7 @@ public:
 
 	FUNC6(environment_set_dof_blur_near, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
 	FUNC6(environment_set_dof_blur_far, RID, bool, float, float, float, EnvironmentDOFBlurQuality)
-	FUNC11(environment_set_glow, RID, bool, int, float, float, float, EnvironmentGlowBlendMode, float, float, float, bool)
+	FUNC12(environment_set_glow, RID, bool, int, float, float, float, EnvironmentGlowBlendMode, float, float, float, bool, bool)
 
 	FUNC9(environment_set_tonemap, RID, EnvironmentToneMapper, float, float, bool, float, float, float, float)
 
@@ -482,6 +485,55 @@ public:
 
 	FUNC2(instance_set_extra_visibility_margin, RID, real_t)
 
+	// Portals
+	FUNC2(instance_set_portal_mode, RID, InstancePortalMode)
+
+	FUNCRID(ghost)
+	FUNC4(ghost_set_scenario, RID, RID, ObjectID, const AABB &)
+	FUNC2(ghost_update, RID, const AABB &)
+
+	FUNCRID(portal)
+	FUNC2(portal_set_scenario, RID, RID)
+	FUNC3(portal_set_geometry, RID, const Vector<Vector3> &, real_t)
+	FUNC4(portal_link, RID, RID, RID, bool)
+	FUNC2(portal_set_active, RID, bool)
+
+	// Roomgroups
+	FUNCRID(roomgroup)
+	FUNC2(roomgroup_prepare, RID, ObjectID)
+	FUNC2(roomgroup_set_scenario, RID, RID)
+	FUNC2(roomgroup_add_room, RID, RID)
+
+	// Occluders
+	FUNCRID(occluder)
+	FUNC3(occluder_set_scenario, RID, RID, OccluderType)
+	FUNC2(occluder_spheres_update, RID, const Vector<Plane> &)
+	FUNC2(occluder_set_transform, RID, const Transform &)
+	FUNC2(occluder_set_active, RID, bool)
+	FUNC1(set_use_occlusion_culling, bool)
+
+	// Rooms
+	FUNCRID(room)
+	FUNC2(room_set_scenario, RID, RID)
+	FUNC4(room_add_instance, RID, RID, const AABB &, const Vector<Vector3> &)
+	FUNC3(room_add_ghost, RID, ObjectID, const AABB &)
+	FUNC5(room_set_bound, RID, ObjectID, const Vector<Plane> &, const AABB &, const Vector<Vector3> &)
+	FUNC2(room_prepare, RID, int32_t)
+	FUNC1(rooms_and_portals_clear, RID)
+	FUNC2(rooms_unload, RID, String)
+	FUNC8(rooms_finalize, RID, bool, bool, bool, bool, String, bool, bool)
+	FUNC4(rooms_override_camera, RID, bool, const Vector3 &, const Vector<Plane> *)
+	FUNC2(rooms_set_active, RID, bool)
+	FUNC3(rooms_set_params, RID, int, real_t)
+	FUNC3(rooms_set_debug_feature, RID, RoomsDebugFeature, bool)
+	FUNC2(rooms_update_gameplay_monitor, RID, const Vector<Vector3> &)
+
+	// don't use this in a game
+	FUNC1RC(bool, rooms_is_loaded, RID)
+
+	// Callbacks
+	FUNC1(callbacks_register, VisualServerCallbacks *)
+
 	// don't use these in a game!
 	FUNC2RC(Vector<ObjectID>, instances_cull_aabb, const AABB &, RID)
 	FUNC3RC(Vector<ObjectID>, instances_cull_ray, const Vector3 &, const Vector3 &, RID)
@@ -490,6 +542,7 @@ public:
 	FUNC3(instance_geometry_set_flag, RID, InstanceFlags, bool)
 	FUNC2(instance_geometry_set_cast_shadows_setting, RID, ShadowCastingSetting)
 	FUNC2(instance_geometry_set_material_override, RID, RID)
+	FUNC2(instance_geometry_set_material_overlay, RID, RID)
 
 	FUNC5(instance_geometry_set_draw_range, RID, float, float, float, float)
 	FUNC2(instance_geometry_set_as_instance_lod, RID, RID)

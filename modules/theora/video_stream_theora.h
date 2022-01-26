@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -46,7 +46,6 @@
 //#define THEORA_USE_THREAD_STREAMING
 
 class VideoStreamPlaybackTheora : public VideoStreamPlayback {
-
 	GDCLASS(VideoStreamPlaybackTheora, VideoStreamPlayback);
 
 	enum {
@@ -64,7 +63,7 @@ class VideoStreamPlaybackTheora : public VideoStreamPlayback {
 
 	int buffer_data();
 	int queue_page(ogg_page *page);
-	void video_write(void);
+	void video_write();
 	float get_time() const;
 
 	bool theora_eos;
@@ -162,7 +161,6 @@ public:
 };
 
 class VideoStreamTheora : public VideoStream {
-
 	GDCLASS(VideoStreamTheora, VideoStream);
 
 	String file;
@@ -188,7 +186,7 @@ public:
 
 class ResourceFormatLoaderTheora : public ResourceFormatLoader {
 public:
-	virtual RES load(const String &p_path, const String &p_original_path = "", Error *r_error = NULL);
+	virtual RES load(const String &p_path, const String &p_original_path = "", Error *r_error = nullptr);
 	virtual void get_recognized_extensions(List<String> *p_extensions) const;
 	virtual bool handles_type(const String &p_type) const;
 	virtual String get_resource_type(const String &p_path) const;

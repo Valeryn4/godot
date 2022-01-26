@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -44,7 +44,6 @@ class Label;
 class Panel;
 
 class Control : public CanvasItem {
-
 	GDCLASS(Control, CanvasItem);
 	OBJ_CATEGORY("GUI Nodes");
 
@@ -132,17 +131,16 @@ public:
 
 private:
 	struct CComparator {
-
 		bool operator()(const Control *p_a, const Control *p_b) const {
-			if (p_a->get_canvas_layer() == p_b->get_canvas_layer())
+			if (p_a->get_canvas_layer() == p_b->get_canvas_layer()) {
 				return p_b->is_greater_than(p_a);
+			}
 
 			return p_a->get_canvas_layer() < p_b->get_canvas_layer();
 		}
 	};
 
 	struct Data {
-
 		Point2 pos_cache;
 		Size2 size_cache;
 		Size2 minimum_size_cache;
@@ -198,17 +196,14 @@ private:
 		NodePath focus_next;
 		NodePath focus_prev;
 
-		HashMap<StringName, Ref<Texture> > icon_override;
-		HashMap<StringName, Ref<Shader> > shader_override;
-		HashMap<StringName, Ref<StyleBox> > style_override;
-		HashMap<StringName, Ref<Font> > font_override;
+		HashMap<StringName, Ref<Texture>> icon_override;
+		HashMap<StringName, Ref<Shader>> shader_override;
+		HashMap<StringName, Ref<StyleBox>> style_override;
+		HashMap<StringName, Ref<Font>> font_override;
 		HashMap<StringName, Color> color_override;
 		HashMap<StringName, int> constant_override;
 
 	} data;
-
-	// used internally
-	Control *_find_control_at_pos(CanvasItem *p_node, const Point2 &p_pos, const Transform2D &p_xform, Transform2D &r_inv_xform);
 
 	void _window_find_focus_neighbour(const Vector2 &p_dir, Node *p_at, const Point2 *p_points, float p_min, float &r_closest_dist, Control **r_closest);
 	Control *_get_focus_neighbour(Margin p_margin, int p_count = 0);
@@ -224,7 +219,6 @@ private:
 	void _change_notify_margins();
 	void _update_minimum_size();
 
-	void _update_scroll();
 	void _resize(const Size2 &p_size);
 
 	void _compute_margins(Rect2 p_rect, const float p_anchors[4], float (&r_margins)[4]);
@@ -244,6 +238,11 @@ private:
 	void _modal_set_prev_focus_owner(ObjectID p_prev);
 
 	void _update_minimum_size_cache();
+
+	template <class T>
+	static T get_theme_item_in_types(Control *p_theme_owner, Theme::DataType p_data_type, const StringName &p_name, List<StringName> p_theme_types);
+	static bool has_theme_item_in_types(Control *p_theme_owner, Theme::DataType p_data_type, const StringName &p_name, List<StringName> p_theme_types);
+	_FORCE_INLINE_ void _get_theme_type_dependencies(const StringName &p_theme_type, List<StringName> *p_list) const;
 
 protected:
 	virtual void add_child_notify(Node *p_child);
@@ -427,12 +426,19 @@ public:
 	void add_color_override(const StringName &p_name, const Color &p_color);
 	void add_constant_override(const StringName &p_name, int p_constant);
 
-	Ref<Texture> get_icon(const StringName &p_name, const StringName &p_node_type = StringName()) const;
-	Ref<Shader> get_shader(const StringName &p_name, const StringName &p_node_type = StringName()) const;
-	Ref<StyleBox> get_stylebox(const StringName &p_name, const StringName &p_node_type = StringName()) const;
-	Ref<Font> get_font(const StringName &p_name, const StringName &p_node_type = StringName()) const;
-	Color get_color(const StringName &p_name, const StringName &p_node_type = StringName()) const;
-	int get_constant(const StringName &p_name, const StringName &p_node_type = StringName()) const;
+	void remove_icon_override(const StringName &p_name);
+	void remove_shader_override(const StringName &p_name);
+	void remove_stylebox_override(const StringName &p_name);
+	void remove_font_override(const StringName &p_name);
+	void remove_color_override(const StringName &p_name);
+	void remove_constant_override(const StringName &p_name);
+
+	Ref<Texture> get_icon(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+	Ref<Shader> get_shader(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+	Ref<StyleBox> get_stylebox(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+	Ref<Font> get_font(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+	Color get_color(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+	int get_constant(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
 
 	bool has_icon_override(const StringName &p_name) const;
 	bool has_shader_override(const StringName &p_name) const;
@@ -441,12 +447,14 @@ public:
 	bool has_color_override(const StringName &p_name) const;
 	bool has_constant_override(const StringName &p_name) const;
 
-	bool has_icon(const StringName &p_name, const StringName &p_node_type = StringName()) const;
-	bool has_shader(const StringName &p_name, const StringName &p_node_type = StringName()) const;
-	bool has_stylebox(const StringName &p_name, const StringName &p_node_type = StringName()) const;
-	bool has_font(const StringName &p_name, const StringName &p_node_type = StringName()) const;
-	bool has_color(const StringName &p_name, const StringName &p_node_type = StringName()) const;
-	bool has_constant(const StringName &p_name, const StringName &p_node_type = StringName()) const;
+	bool has_icon(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+	bool has_shader(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+	bool has_stylebox(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+	bool has_font(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+	bool has_color(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+	bool has_constant(const StringName &p_name, const StringName &p_theme_type = StringName()) const;
+
+	Ref<Font> get_theme_default_font() const;
 
 	/* TOOLTIP */
 

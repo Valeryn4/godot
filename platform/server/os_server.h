@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -48,7 +48,6 @@
 #undef CursorShape
 
 class OS_Server : public OS_Unix {
-
 	VisualServer *visual_server;
 	VideoMode current_videomode;
 	List<String> args;
@@ -120,7 +119,7 @@ public:
 	virtual String get_data_path() const;
 	virtual String get_cache_path() const;
 
-	virtual String get_system_dir(SystemDir p_dir) const;
+	virtual String get_system_dir(SystemDir p_dir, bool p_shared_storage = true) const;
 
 	void disable_crash_handler();
 	bool is_disable_crash_handler() const;

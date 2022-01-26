@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -37,7 +37,6 @@
 class RasterizerSceneGLES2;
 
 class RasterizerCanvasGLES2 : public RasterizerCanvasBaseGLES2, public RasterizerCanvasBatcher<RasterizerCanvasGLES2, RasterizerStorageGLES2> {
-
 	friend class RasterizerCanvasBatcher<RasterizerCanvasGLES2, RasterizerStorageGLES2>;
 
 public:
@@ -55,7 +54,7 @@ private:
 	void canvas_render_items_implementation(Item *p_item_list, int p_z, const Color &p_modulate, Light *p_light, const Transform2D &p_base_transform);
 	void render_joined_item(const BItemJoined &p_bij, RenderItemState &r_ris);
 	bool try_join_item(Item *p_ci, RenderItemState &r_ris, bool &r_batch_break);
-	void render_batches(Item::Command *const *p_commands, Item *p_current_clip, bool &r_reclip, RasterizerStorageGLES2::Material *p_material);
+	void render_batches(Item *p_current_clip, bool &r_reclip, RasterizerStorageGLES2::Material *p_material);
 
 	// low level batch funcs
 	void _batch_upload_buffers();

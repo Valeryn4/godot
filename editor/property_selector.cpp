@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -35,28 +35,25 @@
 #include "editor_scale.h"
 
 void PropertySelector::_text_changed(const String &p_newtext) {
-
 	_update_search();
 }
 
 void PropertySelector::_sbox_input(const Ref<InputEvent> &p_ie) {
-
 	Ref<InputEventKey> k = p_ie;
 
 	if (k.is_valid()) {
-
 		switch (k->get_scancode()) {
 			case KEY_UP:
 			case KEY_DOWN:
 			case KEY_PAGEUP:
 			case KEY_PAGEDOWN: {
-
 				search_options->call("_gui_input", k);
 				search_box->accept_event();
 
 				TreeItem *root = search_options->get_root();
-				if (!root->get_children())
+				if (!root->get_children()) {
 					break;
+				}
 
 				TreeItem *current = search_options->get_selected();
 
@@ -74,13 +71,13 @@ void PropertySelector::_sbox_input(const Ref<InputEvent> &p_ie) {
 }
 
 void PropertySelector::_update_search() {
-
-	if (properties)
+	if (properties) {
 		set_title(TTR("Select Property"));
-	else if (virtuals_only)
+	} else if (virtuals_only) {
 		set_title(TTR("Select Virtual Method"));
-	else
+	} else {
 		set_title(TTR("Select Method"));
+	}
 
 	search_options->clear();
 	help_bit->set_text("");
@@ -91,7 +88,6 @@ void PropertySelector::_update_search() {
 	const String search_text = search_box->get_text().replace(" ", "_");
 
 	if (properties) {
-
 		List<PropertyInfo> props;
 
 		if (instance) {
@@ -99,14 +95,12 @@ void PropertySelector::_update_search() {
 		} else if (type != Variant::NIL) {
 			Variant v;
 			Variant::CallError ce;
-			v = Variant::construct(type, NULL, 0, ce);
+			v = Variant::construct(type, nullptr, 0, ce);
 
 			v.get_property_list(&props);
 		} else {
-
 			Object *obj = ObjectDB::get_instance(script);
 			if (Object::cast_to<Script>(obj)) {
-
 				props.push_back(PropertyInfo(Variant::NIL, "Script Variables", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_CATEGORY));
 				Object::cast_to<Script>(obj)->get_script_property_list(&props);
 			}
@@ -119,7 +113,7 @@ void PropertySelector::_update_search() {
 			}
 		}
 
-		TreeItem *category = NULL;
+		TreeItem *category = nullptr;
 
 		bool found = false;
 
@@ -155,7 +149,7 @@ void PropertySelector::_update_search() {
 
 		for (List<PropertyInfo>::Element *E = props.front(); E; E = E->next()) {
 			if (E->get().usage == PROPERTY_USAGE_CATEGORY) {
-				if (category && category->get_children() == NULL) {
+				if (category && category->get_children() == nullptr) {
 					memdelete(category); //old category was unused
 				}
 				category = search_options->create_item(root);
@@ -172,14 +166,17 @@ void PropertySelector::_update_search() {
 				continue;
 			}
 
-			if (!(E->get().usage & PROPERTY_USAGE_EDITOR) && !(E->get().usage & PROPERTY_USAGE_SCRIPT_VARIABLE))
+			if (!(E->get().usage & PROPERTY_USAGE_EDITOR) && !(E->get().usage & PROPERTY_USAGE_SCRIPT_VARIABLE)) {
 				continue;
+			}
 
-			if (search_box->get_text() != String() && E->get().name.findn(search_text) == -1)
+			if (search_box->get_text() != String() && E->get().name.findn(search_text) == -1) {
 				continue;
+			}
 
-			if (type_filter.size() && type_filter.find(E->get().type) == -1)
+			if (type_filter.size() && type_filter.find(E->get().type) == -1) {
 				continue;
+			}
 
 			TreeItem *item = search_options->create_item(category ? category : root);
 			item->set_text(0, E->get().name);
@@ -194,23 +191,20 @@ void PropertySelector::_update_search() {
 			item->set_selectable(0, true);
 		}
 
-		if (category && category->get_children() == NULL) {
+		if (category && category->get_children() == nullptr) {
 			memdelete(category); //old category was unused
 		}
 	} else {
-
 		List<MethodInfo> methods;
 
 		if (type != Variant::NIL) {
 			Variant v;
 			Variant::CallError ce;
-			v = Variant::construct(type, NULL, 0, ce);
+			v = Variant::construct(type, nullptr, 0, ce);
 			v.get_method_list(&methods);
 		} else {
-
 			Object *obj = ObjectDB::get_instance(script);
 			if (Object::cast_to<Script>(obj)) {
-
 				methods.push_back(MethodInfo("*Script Methods"));
 				Object::cast_to<Script>(obj)->get_script_method_list(&methods);
 			}
@@ -223,14 +217,14 @@ void PropertySelector::_update_search() {
 			}
 		}
 
-		TreeItem *category = NULL;
+		TreeItem *category = nullptr;
 
 		bool found = false;
 		bool script_methods = false;
 
 		for (List<MethodInfo>::Element *E = methods.front(); E; E = E->next()) {
 			if (E->get().name.begins_with("*")) {
-				if (category && category->get_children() == NULL) {
+				if (category && category->get_children() == nullptr) {
 					memdelete(category); //old category was unused
 				}
 				category = search_options->create_item(root);
@@ -252,17 +246,21 @@ void PropertySelector::_update_search() {
 			}
 
 			String name = E->get().name.get_slice(":", 0);
-			if (!script_methods && name.begins_with("_") && !(E->get().flags & METHOD_FLAG_VIRTUAL))
+			if (!script_methods && name.begins_with("_") && !(E->get().flags & METHOD_FLAG_VIRTUAL)) {
 				continue;
+			}
 
-			if (virtuals_only && !(E->get().flags & METHOD_FLAG_VIRTUAL))
+			if (virtuals_only && !(E->get().flags & METHOD_FLAG_VIRTUAL)) {
 				continue;
+			}
 
-			if (!virtuals_only && (E->get().flags & METHOD_FLAG_VIRTUAL))
+			if (!virtuals_only && (E->get().flags & METHOD_FLAG_VIRTUAL)) {
 				continue;
+			}
 
-			if (search_box->get_text() != String() && name.findn(search_text) == -1)
+			if (search_box->get_text() != String() && name.findn(search_text) == -1) {
 				continue;
+			}
 
 			TreeItem *item = search_options->create_item(category ? category : root);
 
@@ -281,9 +279,9 @@ void PropertySelector::_update_search() {
 			desc += vformat(" %s(", mi.name);
 
 			for (int i = 0; i < mi.arguments.size(); i++) {
-
-				if (i > 0)
+				if (i > 0) {
 					desc += ", ";
+				}
 
 				desc += mi.arguments[i].name;
 
@@ -299,11 +297,13 @@ void PropertySelector::_update_search() {
 
 			desc += ")";
 
-			if (E->get().flags & METHOD_FLAG_CONST)
+			if (E->get().flags & METHOD_FLAG_CONST) {
 				desc += " const";
+			}
 
-			if (E->get().flags & METHOD_FLAG_VIRTUAL)
+			if (E->get().flags & METHOD_FLAG_VIRTUAL) {
 				desc += " virtual";
+			}
 
 			item->set_text(0, desc);
 			item->set_metadata(0, name);
@@ -315,89 +315,97 @@ void PropertySelector::_update_search() {
 			}
 		}
 
-		if (category && category->get_children() == NULL) {
+		if (category && category->get_children() == nullptr) {
 			memdelete(category); //old category was unused
 		}
 	}
 
-	get_ok()->set_disabled(root->get_children() == NULL);
+	get_ok()->set_disabled(root->get_children() == nullptr);
 }
 
 void PropertySelector::_confirmed() {
-
 	TreeItem *ti = search_options->get_selected();
-	if (!ti)
+	if (!ti) {
 		return;
+	}
 	emit_signal("selected", ti->get_metadata(0));
 	hide();
 }
 
 void PropertySelector::_item_selected() {
-
 	help_bit->set_text("");
 
 	TreeItem *item = search_options->get_selected();
-	if (!item)
+	if (!item) {
 		return;
+	}
 	String name = item->get_metadata(0);
 
 	String class_type;
 	if (type != Variant::NIL) {
 		class_type = Variant::get_type_name(type);
-
-	} else {
+	} else if (base_type != String()) {
 		class_type = base_type;
+	} else if (instance) {
+		class_type = instance->get_class();
 	}
 
 	DocData *dd = EditorHelp::get_doc_data();
 	String text;
-
 	if (properties) {
-
-		String at_class = class_type;
-
-		while (at_class != String()) {
-
-			Map<String, DocData::ClassDoc>::Element *E = dd->class_list.find(at_class);
+		while (class_type != String()) {
+			Map<String, DocData::ClassDoc>::Element *E = dd->class_list.find(class_type);
 			if (E) {
 				for (int i = 0; i < E->get().properties.size(); i++) {
 					if (E->get().properties[i].name == name) {
-						text = E->get().properties[i].description;
+						text = DTR(E->get().properties[i].description);
+						break;
 					}
 				}
 			}
 
-			at_class = ClassDB::get_parent_class(at_class);
+			if (text != String()) {
+				break;
+			}
+
+			// The property may be from a parent class, keep looking.
+			class_type = ClassDB::get_parent_class(class_type);
 		}
 	} else {
-
-		String at_class = class_type;
-
-		while (at_class != String()) {
-
-			Map<String, DocData::ClassDoc>::Element *E = dd->class_list.find(at_class);
+		while (class_type != String()) {
+			Map<String, DocData::ClassDoc>::Element *E = dd->class_list.find(class_type);
 			if (E) {
 				for (int i = 0; i < E->get().methods.size(); i++) {
 					if (E->get().methods[i].name == name) {
-						text = E->get().methods[i].description;
+						text = DTR(E->get().methods[i].description);
+						break;
 					}
 				}
 			}
 
-			at_class = ClassDB::get_parent_class(at_class);
+			if (text != String()) {
+				break;
+			}
+
+			// The method may be from a parent class, keep looking.
+			class_type = ClassDB::get_parent_class(class_type);
 		}
 	}
 
-	if (text == String())
-		return;
-
-	help_bit->set_text(text);
+	if (text != String()) {
+		// Display both property name and description, since the help bit may be displayed
+		// far away from the location (especially if the dialog was resized to be taller).
+		help_bit->set_text(vformat("[b]%s[/b]: %s", name, text));
+		help_bit->get_rich_text()->set_self_modulate(Color(1, 1, 1, 1));
+	} else {
+		// Use nested `vformat()` as translators shouldn't interfere with BBCode tags.
+		help_bit->set_text(vformat(TTR("No description available for %s."), vformat("[b]%s[/b]", name)));
+		help_bit->get_rich_text()->set_self_modulate(Color(1, 1, 1, 0.5));
+	}
 }
 
 void PropertySelector::_notification(int p_what) {
-
 	if (p_what == NOTIFICATION_ENTER_TREE) {
-
 		connect("confirmed", this, "_confirmed");
 	} else if (p_what == NOTIFICATION_EXIT_TREE) {
 		disconnect("confirmed", this, "_confirmed");
@@ -405,13 +413,12 @@ void PropertySelector::_notification(int p_what) {
 }
 
 void PropertySelector::select_method_from_base_type(const String &p_base, const String &p_current, bool p_virtuals_only) {
-
 	base_type = p_base;
 	selected = p_current;
 	type = Variant::NIL;
 	script = 0;
 	properties = false;
-	instance = NULL;
+	instance = nullptr;
 	virtuals_only = p_virtuals_only;
 
 	popup_centered_ratio(0.6);
@@ -421,14 +428,13 @@ void PropertySelector::select_method_from_base_type(const String &p_base, const 
 }
 
 void PropertySelector::select_method_from_script(const Ref<Script> &p_script, const String &p_current) {
-
 	ERR_FAIL_COND(p_script.is_null());
 	base_type = p_script->get_instance_base_type();
 	selected = p_current;
 	type = Variant::NIL;
 	script = p_script->get_instance_id();
 	properties = false;
-	instance = NULL;
+	instance = nullptr;
 	virtuals_only = false;
 
 	popup_centered_ratio(0.6);
@@ -437,14 +443,13 @@ void PropertySelector::select_method_from_script(const Ref<Script> &p_script, co
 	_update_search();
 }
 void PropertySelector::select_method_from_basic_type(Variant::Type p_type, const String &p_current) {
-
 	ERR_FAIL_COND(p_type == Variant::NIL);
 	base_type = "";
 	selected = p_current;
 	type = p_type;
 	script = 0;
 	properties = false;
-	instance = NULL;
+	instance = nullptr;
 	virtuals_only = false;
 
 	popup_centered_ratio(0.6);
@@ -454,18 +459,18 @@ void PropertySelector::select_method_from_basic_type(Variant::Type p_type, const
 }
 
 void PropertySelector::select_method_from_instance(Object *p_instance, const String &p_current) {
-
 	base_type = p_instance->get_class();
 	selected = p_current;
 	type = Variant::NIL;
 	script = 0;
 	{
 		Ref<Script> scr = p_instance->get_script();
-		if (scr.is_valid())
+		if (scr.is_valid()) {
 			script = scr->get_instance_id();
+		}
 	}
 	properties = false;
-	instance = NULL;
+	instance = nullptr;
 	virtuals_only = false;
 
 	popup_centered_ratio(0.6);
@@ -475,13 +480,12 @@ void PropertySelector::select_method_from_instance(Object *p_instance, const Str
 }
 
 void PropertySelector::select_property_from_base_type(const String &p_base, const String &p_current) {
-
 	base_type = p_base;
 	selected = p_current;
 	type = Variant::NIL;
 	script = 0;
 	properties = true;
-	instance = NULL;
+	instance = nullptr;
 	virtuals_only = false;
 
 	popup_centered_ratio(0.6);
@@ -491,7 +495,6 @@ void PropertySelector::select_property_from_base_type(const String &p_base, cons
 }
 
 void PropertySelector::select_property_from_script(const Ref<Script> &p_script, const String &p_current) {
-
 	ERR_FAIL_COND(p_script.is_null());
 
 	base_type = p_script->get_instance_base_type();
@@ -499,7 +502,7 @@ void PropertySelector::select_property_from_script(const Ref<Script> &p_script, 
 	type = Variant::NIL;
 	script = p_script->get_instance_id();
 	properties = true;
-	instance = NULL;
+	instance = nullptr;
 	virtuals_only = false;
 
 	popup_centered_ratio(0.6);
@@ -509,14 +512,13 @@ void PropertySelector::select_property_from_script(const Ref<Script> &p_script, 
 }
 
 void PropertySelector::select_property_from_basic_type(Variant::Type p_type, const String &p_current) {
-
 	ERR_FAIL_COND(p_type == Variant::NIL);
 	base_type = "";
 	selected = p_current;
 	type = p_type;
 	script = 0;
 	properties = true;
-	instance = NULL;
+	instance = nullptr;
 	virtuals_only = false;
 
 	popup_centered_ratio(0.6);
@@ -526,7 +528,6 @@ void PropertySelector::select_property_from_basic_type(Variant::Type p_type, con
 }
 
 void PropertySelector::select_property_from_instance(Object *p_instance, const String &p_current) {
-
 	base_type = "";
 	selected = p_current;
 	type = Variant::NIL;
@@ -546,7 +547,6 @@ void PropertySelector::set_type_filter(const Vector<Variant::Type> &p_type_filte
 }
 
 void PropertySelector::_bind_methods() {
-
 	ClassDB::bind_method(D_METHOD("_text_changed"), &PropertySelector::_text_changed);
 	ClassDB::bind_method(D_METHOD("_confirmed"), &PropertySelector::_confirmed);
 	ClassDB::bind_method(D_METHOD("_sbox_input"), &PropertySelector::_sbox_input);
@@ -556,7 +556,6 @@ void PropertySelector::_bind_methods() {
 }
 
 PropertySelector::PropertySelector() {
-
 	VBoxContainer *vbc = memnew(VBoxContainer);
 	add_child(vbc);
 	//set_child_rect(vbc);

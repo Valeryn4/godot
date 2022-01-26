@@ -3,10 +3,12 @@
 EnsureSConsVersion(0, 98, 1)
 
 # System
+import atexit
 import glob
 import os
 import pickle
 import sys
+import time
 from collections import OrderedDict
 
 # Local
@@ -24,6 +26,8 @@ active_platforms = []
 active_platform_ids = []
 platform_exporters = []
 platform_apis = []
+
+time_at_start = time.time()
 
 for x in sorted(glob.glob("platform/*")):
     if not os.path.isdir(x) or not os.path.exists(x + "/detect.py"):
@@ -121,7 +125,6 @@ opts.Add(BoolVariable("use_lto", "Use link-time optimization", False))
 
 # Components
 opts.Add(BoolVariable("deprecated", "Enable deprecated features", True))
-opts.Add(BoolVariable("gdscript", "Enable GDScript support", True))
 opts.Add(BoolVariable("minizip", "Enable ZIP archive support using minizip", True))
 opts.Add(BoolVariable("xaudio2", "Enable the XAudio2 audio driver", False))
 opts.Add("custom_modules", "A list of comma-separated directory paths containing custom modules to build.", "")
@@ -144,13 +147,22 @@ opts.Add(
 )
 opts.Add(BoolVariable("disable_3d", "Disable 3D nodes for a smaller executable", False))
 opts.Add(BoolVariable("disable_advanced_gui", "Disable advanced GUI nodes and behaviors", False))
-opts.Add(BoolVariable("no_editor_splash", "Don't use the custom splash screen for the editor", False))
+opts.Add(BoolVariable("no_editor_splash", "Don't use the custom splash screen for the editor", True))
 opts.Add("system_certs_path", "Use this path as SSL certificates default for editor (for package maintainers)", "")
 opts.Add(BoolVariable("use_precise_math_checks", "Math checks use very precise epsilon (debug option)", False))
+opts.Add(
+    EnumVariable(
+        "rids",
+        "Server object management technique (debug option)",
+        "pointers",
+        ("pointers", "handles", "tracked_handles"),
+    )
+)
 
 # Thirdparty libraries
 opts.Add(BoolVariable("builtin_bullet", "Use the built-in Bullet library", True))
 opts.Add(BoolVariable("builtin_certs", "Use the built-in SSL certificates bundles", True))
+opts.Add(BoolVariable("builtin_embree", "Use the built-in Embree library", True))
 opts.Add(BoolVariable("builtin_enet", "Use the built-in ENet library", True))
 opts.Add(BoolVariable("builtin_freetype", "Use the built-in FreeType library", True))
 opts.Add(BoolVariable("builtin_libogg", "Use the built-in libogg library", True))
@@ -166,6 +178,7 @@ opts.Add(BoolVariable("builtin_opus", "Use the built-in Opus library", True))
 opts.Add(BoolVariable("builtin_pcre2", "Use the built-in PCRE2 library", True))
 opts.Add(BoolVariable("builtin_pcre2_with_jit", "Use JIT compiler for the built-in PCRE2 library", True))
 opts.Add(BoolVariable("builtin_recast", "Use the built-in Recast library", True))
+opts.Add(BoolVariable("builtin_rvo2", "Use the built-in RVO2 library", True))
 opts.Add(BoolVariable("builtin_squish", "Use the built-in squish library", True))
 opts.Add(BoolVariable("builtin_xatlas", "Use the built-in xatlas library", True))
 opts.Add(BoolVariable("builtin_zlib", "Use the built-in zlib library", True))
@@ -194,7 +207,13 @@ elif env_base["p"] != "":
     selected_platform = env_base["p"]
 else:
     # Missing `platform` argument, try to detect platform automatically
-    if sys.platform.startswith("linux"):
+    if (
+        sys.platform.startswith("linux")
+        or sys.platform.startswith("dragonfly")
+        or sys.platform.startswith("freebsd")
+        or sys.platform.startswith("netbsd")
+        or sys.platform.startswith("openbsd")
+    ):
         selected_platform = "x11"
     elif sys.platform == "darwin":
         selected_platform = "osx"
@@ -212,7 +231,7 @@ else:
 if selected_platform in ["linux", "bsd", "linuxbsd"]:
     if selected_platform == "linuxbsd":
         # Alias for forward compatibility.
-        print('Platform "linuxbsd" is still called "x11" in Godot 3.2.x. Building for platform "x11".')
+        print('Platform "linuxbsd" is still called "x11" in Godot 3.x. Building for platform "x11".')
     # Alias for convenience.
     selected_platform = "x11"
 
@@ -287,27 +306,37 @@ env_base.Prepend(CPPPATH=["#"])
 env_base.platform_exporters = platform_exporters
 env_base.platform_apis = platform_apis
 
+# Build type defines - more platform-specific ones can be in detect.py.
+if env_base["target"] == "release_debug" or env_base["target"] == "debug":
+    # DEBUG_ENABLED enables debugging *features* and debug-only code, which is intended
+    # to give *users* extra debugging information for their game development.
+    env_base.Append(CPPDEFINES=["DEBUG_ENABLED"])
+
+if env_base["target"] == "debug":
+    # DEV_ENABLED enables *engine developer* code which should only be compiled for those
+    # working on the engine itself.
+    env_base.Append(CPPDEFINES=["DEV_ENABLED"])
+
 if env_base["use_precise_math_checks"]:
     env_base.Append(CPPDEFINES=["PRECISE_MATH_CHECKS"])
 
-if env_base["target"] == "debug":
-    env_base.Append(CPPDEFINES=["DEBUG_MEMORY_ALLOC", "DISABLE_FORCED_INLINE"])
-
-    # The two options below speed up incremental builds, but reduce the certainty that all files
-    # will properly be rebuilt. As such, we only enable them for debug (dev) builds, not release.
-
-    # To decide whether to rebuild a file, use the MD5 sum only if the timestamp has changed.
-    # http://scons.org/doc/production/HTML/scons-user/ch06.html#idm139837621851792
-    env_base.Decider("MD5-timestamp")
-    # Use cached implicit dependencies by default. Can be overridden by specifying `--implicit-deps-changed` in the command line.
-    # http://scons.org/doc/production/HTML/scons-user/ch06s04.html
-    env_base.SetOption("implicit_cache", 1)
-
+if not env_base.File("#main/splash_editor.png").exists():
+    # Force disabling editor splash if missing.
+    env_base["no_editor_splash"] = True
 if env_base["no_editor_splash"]:
     env_base.Append(CPPDEFINES=["NO_EDITOR_SPLASH"])
 
 if not env_base["deprecated"]:
     env_base.Append(CPPDEFINES=["DISABLE_DEPRECATED"])
+
+if env_base["rids"] == "handles":
+    env_base.Append(CPPDEFINES=["RID_HANDLES_ENABLED"])
+    print("WARNING: Building with RIDs as handles.")
+
+if env_base["rids"] == "tracked_handles":
+    env_base.Append(CPPDEFINES=["RID_HANDLES_ENABLED"])
+    env_base.Append(CPPDEFINES=["RID_HANDLE_ALLOCATION_TRACKING_ENABLED"])
+    print("WARNING: Building with RIDs as tracked handles.")
 
 if selected_platform in platform_list:
     tmppath = "./platform/" + selected_platform
@@ -421,17 +450,21 @@ if selected_platform in platform_list:
     else:  # GCC, Clang
         version = methods.get_compiler_version(env) or [-1, -1]
 
-        gcc_common_warnings = []
+        common_warnings = []
 
         if methods.using_gcc(env):
-            gcc_common_warnings += ["-Wno-misleading-indentation"]
+            common_warnings += ["-Wno-misleading-indentation"]
             if version[0] >= 7:
-                gcc_common_warnings += ["-Wshadow-local"]
+                common_warnings += ["-Wshadow-local"]
+        elif methods.using_clang(env) or methods.using_emcc(env):
+            # We often implement `operator<` for structs of pointers as a requirement
+            # for putting them in `Set` or `Map`. We don't mind about unreliable ordering.
+            common_warnings += ["-Wno-ordered-compare-function-pointers"]
 
         if env["warnings"] == "extra":
             # Note: enable -Wimplicit-fallthrough for Clang (already part of -Wextra for GCC)
             # once we switch to C++11 or later (necessary for our FALLTHROUGH macro).
-            env.Append(CCFLAGS=["-Wall", "-Wextra", "-Wwrite-strings", "-Wno-unused-parameter"] + gcc_common_warnings)
+            env.Append(CCFLAGS=["-Wall", "-Wextra", "-Wwrite-strings", "-Wno-unused-parameter"] + common_warnings)
             env.Append(CXXFLAGS=["-Wctor-dtor-privacy", "-Wnon-virtual-dtor"])
             if methods.using_gcc(env):
                 env.Append(
@@ -447,9 +480,9 @@ if selected_platform in platform_list:
                 if version[0] >= 9:
                     env.Append(CCFLAGS=["-Wattribute-alias=2"])
         elif env["warnings"] == "all":
-            env.Append(CCFLAGS=["-Wall"] + gcc_common_warnings)
+            env.Append(CCFLAGS=["-Wall"] + common_warnings)
         elif env["warnings"] == "moderate":
-            env.Append(CCFLAGS=["-Wall", "-Wno-unused"] + gcc_common_warnings)
+            env.Append(CCFLAGS=["-Wall", "-Wno-unused"] + common_warnings)
         else:  # 'no'
             env.Append(CCFLAGS=["-w"])
 
@@ -465,11 +498,11 @@ if selected_platform in platform_list:
 
     if env["target"] == "release":
         if env["tools"]:
-            print("Tools can only be built with targets 'debug' and 'release_debug'.")
-            sys.exit(255)
+            print("ERROR: The editor can only be built with `target=debug` or `target=release_debug`.")
+            print("       Use `tools=no target=release` to build a release export template.")
+            Exit(255)
         suffix += ".opt"
         env.Append(CPPDEFINES=["NDEBUG"])
-
     elif env["target"] == "release_debug":
         if env["tools"]:
             suffix += ".opt.tools"
@@ -477,8 +510,14 @@ if selected_platform in platform_list:
             suffix += ".opt.debug"
     else:
         if env["tools"]:
+            print(
+                "Note: Building a debug binary (which will run slowly). Use `target=release_debug` to build an optimized release binary."
+            )
             suffix += ".tools"
         else:
+            print(
+                "Note: Building a debug binary (which will run slowly). Use `target=release` to build an optimized release binary."
+            )
             suffix += ".debug"
 
     if env["arch"] != "":
@@ -570,8 +609,6 @@ if selected_platform in platform_list:
             sys.exit(255)
         else:
             env.Append(CPPDEFINES=["_3D_DISABLED"])
-    if env["gdscript"]:
-        env.Append(CPPDEFINES=["GDSCRIPT_ENABLED"])
     if env["disable_advanced_gui"]:
         if env["tools"]:
             print(
@@ -584,7 +621,7 @@ if selected_platform in platform_list:
     if env["minizip"]:
         env.Append(CPPDEFINES=["MINIZIP_ENABLED"])
 
-    editor_module_list = ["freetype", "regex"]
+    editor_module_list = ["freetype"]
     for x in editor_module_list:
         if not env["module_" + x + "_enabled"]:
             if env["tools"]:
@@ -675,3 +712,12 @@ if "env" in locals():
     # TODO: replace this with `env.Dump(format="json")`
     # once we start requiring SCons 4.0 as min version.
     methods.dump(env)
+
+
+def print_elapsed_time():
+    elapsed_time_sec = round(time.time() - time_at_start, 3)
+    time_ms = round((elapsed_time_sec % 1) * 1000)
+    print("[Time elapsed: {}.{:03}]".format(time.strftime("%H:%M:%S", time.gmtime(elapsed_time_sec)), time_ms))
+
+
+atexit.register(print_elapsed_time)

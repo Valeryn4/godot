@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -43,7 +43,6 @@
 #include <stdlib.h>
 
 class OS {
-
 	static OS *singleton;
 	static uint64_t target_ticks;
 	String _execpath;
@@ -63,6 +62,7 @@ class OS {
 	bool _allow_layered;
 	bool _use_vsync;
 	bool _vsync_via_compositor;
+	bool _delta_smoothing_enabled;
 
 	char *last_error;
 
@@ -95,7 +95,6 @@ public:
 		RENDER_SEPARATE_THREAD
 	};
 	struct VideoMode {
-
 		int width, height;
 		bool fullscreen;
 		bool resizable;
@@ -177,6 +176,7 @@ public:
 
 	virtual void set_clipboard(const String &p_text);
 	virtual String get_clipboard() const;
+	virtual bool has_clipboard() const;
 
 	virtual void set_video_mode(const VideoMode &p_video_mode, int p_screen = 0) = 0;
 	virtual VideoMode get_video_mode(int p_screen = 0) const = 0;
@@ -191,6 +191,9 @@ public:
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
 	virtual int get_current_video_driver() const = 0;
+
+	virtual bool is_offscreen_gl_available() const;
+	virtual void set_offscreen_gl_current(bool p_current);
 
 	virtual int get_audio_driver_count() const;
 	virtual const char *get_audio_driver_name(int p_driver) const;
@@ -232,8 +235,6 @@ public:
 	virtual void set_window_always_on_top(bool p_enabled) {}
 	virtual bool is_window_always_on_top() const { return false; }
 	virtual bool is_window_focused() const { return true; }
-	virtual void set_console_visible(bool p_enabled) {}
-	virtual bool is_console_visible() const { return false; }
 	virtual void request_attention() {}
 	virtual void center_window();
 
@@ -251,7 +252,7 @@ public:
 		OPENGL_CONTEXT, // HGLRC, X11::GLXContext, NSOpenGLContext*, EGLContext* ...
 	};
 
-	virtual void *get_native_handle(int p_handle_type) { return NULL; };
+	virtual void *get_native_handle(int p_handle_type) { return nullptr; };
 
 	// Returns window area free of hardware controls and other obstacles.
 	// The application should use this to determine where to place UI elements.
@@ -266,7 +267,7 @@ public:
 	}
 
 	virtual void set_borderless_window(bool p_borderless) {}
-	virtual bool get_borderless_window() { return 0; }
+	virtual bool get_borderless_window() { return false; }
 
 	virtual bool get_window_per_pixel_transparency_enabled() const { return false; }
 	virtual void set_window_per_pixel_transparency_enabled(bool p_enabled) {}
@@ -288,7 +289,7 @@ public:
 	virtual int get_low_processor_usage_mode_sleep_usec() const;
 
 	virtual String get_executable_path() const;
-	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking = true, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL, bool read_stderr = false, Mutex *p_pipe_mutex = NULL) = 0;
+	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking = true, ProcessID *r_child_id = nullptr, String *r_pipe = nullptr, int *r_exitcode = nullptr, bool read_stderr = false, Mutex *p_pipe_mutex = nullptr, bool p_open_console = false) = 0;
 	virtual Error kill(const ProcessID &p_pid) = 0;
 	virtual int get_process_id() const;
 	virtual void vibrate_handheld(int p_duration_ms = 500);
@@ -338,7 +339,6 @@ public:
 	};
 
 	struct Date {
-
 		int year;
 		Month month;
 		int day;
@@ -347,7 +347,6 @@ public:
 	};
 
 	struct Time {
-
 		int hour;
 		int min;
 		int sec;
@@ -411,6 +410,7 @@ public:
 
 	// returns height of the currently shown virtual keyboard (0 if keyboard is hidden)
 	virtual int get_virtual_keyboard_height() const;
+	virtual uint32_t keyboard_get_scancode_from_physical(uint32_t p_scancode) const;
 
 	virtual void set_cursor_shape(CursorShape p_shape);
 	virtual CursorShape get_cursor_shape() const;
@@ -430,6 +430,7 @@ public:
 	RenderThreadMode get_render_thread_mode() const { return _render_thread_mode; }
 
 	virtual String get_locale() const;
+	String get_locale_language() const;
 
 	String get_safe_dir_name(const String &p_dir_name, bool p_allow_dir_separator = false) const;
 	virtual String get_godot_dir_name() const;
@@ -438,6 +439,7 @@ public:
 	virtual String get_config_path() const;
 	virtual String get_cache_path() const;
 	virtual String get_bundle_resource_dir() const;
+	virtual String get_bundle_icon_path() const;
 
 	virtual String get_user_data_dir() const;
 	virtual String get_resource_dir() const;
@@ -453,7 +455,7 @@ public:
 		SYSTEM_DIR_RINGTONES,
 	};
 
-	virtual String get_system_dir(SystemDir p_dir) const;
+	virtual String get_system_dir(SystemDir p_dir, bool p_shared_storage = true) const;
 
 	virtual Error move_to_trash(const String &p_path) { return FAILED; }
 
@@ -475,6 +477,7 @@ public:
 
 	virtual void set_screen_orientation(ScreenOrientation p_orientation);
 	virtual ScreenOrientation get_screen_orientation() const;
+	ScreenOrientation get_screen_orientation_from_string(const String &p_orientation) const;
 
 	virtual void enable_for_stealing_focus(ProcessID pid) {}
 	virtual void move_window_to_foreground() {}
@@ -549,6 +552,9 @@ public:
 
 	void set_vsync_via_compositor(bool p_enable);
 	bool is_vsync_via_compositor_enabled() const;
+
+	void set_delta_smoothing(bool p_enabled);
+	bool is_delta_smoothing_enabled() const;
 
 	virtual OS::PowerState get_power_state();
 	virtual int get_power_seconds_left();

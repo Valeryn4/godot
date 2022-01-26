@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -38,7 +38,6 @@
 #include "websocket_client.h"
 
 class EMWSClient : public WebSocketClient {
-
 	GDCIIMPL(EMWSClient, WebSocketClient);
 
 private:
@@ -46,6 +45,7 @@ private:
 	bool _is_connecting;
 	int _in_buf_size;
 	int _in_pkt_size;
+	int _out_buf_size;
 
 	static void _esws_on_connect(void *obj, char *proto);
 	static void _esws_on_message(void *obj, const uint8_t *p_data, int p_data_size, int p_is_string);

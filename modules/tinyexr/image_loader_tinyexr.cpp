@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -33,12 +33,13 @@
 #include "core/os/os.h"
 #include "core/print_string.h"
 
+#include <zlib.h> // Should come before including tinyexr.
+
 #include "thirdparty/tinyexr/tinyexr.h"
 
 Error ImageLoaderTinyEXR::load_image(Ref<Image> p_image, FileAccess *f, bool p_force_linear, float p_scale) {
-
 	PoolVector<uint8_t> src_image;
-	int src_image_len = f->get_len();
+	uint64_t src_image_len = f->get_len();
 	ERR_FAIL_COND_V(src_image_len == 0, ERR_FILE_CORRUPT);
 	src_image.resize(src_image_len);
 
@@ -171,7 +172,6 @@ Error ImageLoaderTinyEXR::load_image(Ref<Image> p_image, FileAccess *f, bool p_f
 
 	//print_line("reading format: " + Image::get_format_name(format));
 	{
-
 		PoolVector<uint8_t>::Write imgdata_write = imgdata.write();
 		uint8_t *wd = imgdata_write.ptr();
 		uint16_t *iw16 = (uint16_t *)wd;

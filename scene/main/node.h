@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -42,7 +42,6 @@
 class Viewport;
 class SceneState;
 class Node : public Object {
-
 	GDCLASS(Node, Object);
 	OBJ_CATEGORY("Nodes");
 
@@ -65,13 +64,17 @@ public:
 #endif
 	};
 
-	struct Comparator {
+	enum NameCasing {
+		NAME_CASING_PASCAL_CASE,
+		NAME_CASING_CAMEL_CASE,
+		NAME_CASING_SNAKE_CASE
+	};
 
+	struct Comparator {
 		bool operator()(const Node *p_a, const Node *p_b) const { return p_b->is_greater_than(p_a); }
 	};
 
 	struct ComparatorWithPriority {
-
 		bool operator()(const Node *p_a, const Node *p_b) const { return p_b->data.process_priority == p_a->data.process_priority ? p_b->is_greater_than(p_a) : p_b->data.process_priority > p_a->data.process_priority; }
 	};
 
@@ -79,14 +82,12 @@ public:
 
 private:
 	struct GroupData {
-
 		bool persistent;
 		SceneTree::Group *group;
 		GroupData() { persistent = false; }
 	};
 
 	struct Data {
-
 		String filename;
 		Ref<SceneState> instance_state;
 		Ref<SceneState> inherited_state;
@@ -143,12 +144,6 @@ private:
 
 	} data;
 
-	enum NameCasing {
-		NAME_CASING_PASCAL_CASE,
-		NAME_CASING_CAMEL_CASE,
-		NAME_CASING_SNAKE_CASE
-	};
-
 	Ref<MultiplayerAPI> multiplayer;
 
 	void _print_tree_pretty(const String &prefix, const bool last);
@@ -167,14 +162,13 @@ private:
 	void _propagate_ready();
 	void _propagate_exit_tree();
 	void _propagate_after_exit_tree();
-	void _propagate_validate_owner();
 	void _print_stray_nodes();
 	void _propagate_pause_owner(Node *p_owner);
 	Array _get_node_and_resource(const NodePath &p_path);
 
 	void _duplicate_signals(const Node *p_original, Node *p_copy) const;
 	void _duplicate_and_reown(Node *p_new_parent, const Map<Node *, Node *> &p_reown_map) const;
-	Node *_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap = NULL) const;
+	Node *_duplicate(int p_flags, Map<const Node *, Node *> *r_duplimap = nullptr) const;
 
 	Array _get_children() const;
 	Array _get_groups() const;
@@ -271,7 +265,7 @@ public:
 	Node *find_parent(const String &p_mask) const;
 
 	_FORCE_INLINE_ SceneTree *get_tree() const {
-		ERR_FAIL_COND_V(!data.tree, NULL);
+		ERR_FAIL_COND_V(!data.tree, nullptr);
 		return data.tree;
 	}
 
@@ -289,7 +283,6 @@ public:
 	bool is_in_group(const StringName &p_identifier) const;
 
 	struct GroupInfo {
-
 		StringName name;
 		bool persistent;
 	};
@@ -319,6 +312,15 @@ public:
 	void set_editable_instance(Node *p_node, bool p_editable);
 	bool is_editable_instance(const Node *p_node) const;
 	Node *get_deepest_editable_node(Node *start_node) const;
+
+#ifdef TOOLS_ENABLED
+	void set_property_pinned(const StringName &p_property, bool p_pinned);
+	bool is_property_pinned(const StringName &p_property) const;
+	virtual StringName get_property_store_alias(const StringName &p_property) const;
+#endif
+	void get_storable_properties(Set<StringName> &r_storable_properties) const;
+
+	virtual String to_string();
 
 	/* NOTIFICATIONS */
 

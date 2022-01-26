@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+<html xmlns="https://www.w3.org/1999/xhtml" lang="en">
 <head>
 	<meta charset="utf-8" />
 	<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no" />
@@ -9,8 +9,8 @@
 	<meta name="apple-mobile-web-app-capable" content="yes" />
 	<meta name="application-name" content="Godot" />
 	<meta name="apple-mobile-web-app-title" content="Godot" />
-	<meta name="theme-color" content="#478cbf" />
-	<meta name="msapplication-navbutton-color" content="#478cbf" />
+	<meta name="theme-color" content="#202531" />
+	<meta name="msapplication-navbutton-color" content="#202531" />
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 	<meta name="msapplication-starturl" content="/latest" />
 	<meta property="og:site_name" content="Godot Engine Web Editor" />
@@ -56,6 +56,29 @@
 
 		a:active {
 			filter: brightness(82.5%);
+		}
+
+		.welcome-modal {
+			display: none;
+ 			position: fixed;
+			z-index: 1;
+			left: 0;
+			top: 0;
+			width: 100%;
+			height: 100%;
+			overflow: auto;
+			background-color: hsla(0, 0%, 0%, 0.5);
+		}
+
+		.welcome-modal-content {
+			background-color: #333b4f;
+			box-shadow: 0 0.25rem 0.25rem hsla(0, 0%, 0%, 0.5);
+			line-height: 1.5;
+			max-width: 38rem;
+			margin: 4rem auto 0 auto;
+			color: white;
+			border-radius: 0.5rem;
+			padding: 1rem 1rem 2rem 1rem;
 		}
 
 		#tabs-buttons {
@@ -206,6 +229,36 @@
 	</style>
 </head>
 <body>
+	<div
+		id="welcome-modal"
+		class="welcome-modal"
+		role="dialog"
+		aria-labelledby="welcome-modal-title"
+		aria-describedby="welcome-modal-description"
+		onclick="if (event.target === this) closeWelcomeModal(false)"
+	>
+		<div class="welcome-modal-content">
+			<h2 id="welcome-modal-title">Important - Please read before continuing</h2>
+			<div id="welcome-modal-description">
+				<p>
+					The Godot Web Editor has some limitations compared to the native version.
+					Its main focus is education and experimentation;
+					<strong>it is not recommended for production</strong>.
+				</p>
+				<p>
+					Refer to the
+					<a
+						href="https://docs.godotengine.org/en/latest/tutorials/editor/using_the_web_editor.html"
+						target="_blank"
+						rel="noopener"
+					>Web editor documentation</a> for usage instructions and limitations.
+				</p>
+			</div>
+			<button id="welcome-modal-dismiss" class="btn" type="button" onclick="closeWelcomeModal(true)" style="margin-top: 1rem">
+				OK, don't show again
+			</button>
+		</div>
+	</div>
 	<div id="tabs-buttons">
 		<button id="btn-tab-loader" class="btn tab-btn" onclick="showTab('loader')">Loader</button>
 		<button id="btn-tab-editor" class="btn tab-btn" disabled="disabled" onclick="showTab('editor')">Editor</button>
@@ -216,11 +269,6 @@
 	<div id="tabs">
 		<div id="tab-loader">
 			<div style="color: #e0e0e0;" id="persistence">
-				<label for="videoMode" style="display: none;">Select video driver:</label><br />
-				<select id="videoMode" style="display: none;">
-					<option value="GLES2" selected="selected">WebGL</option>
-					<option value="GLES3">WebGL 2</option>
-				</select>
 				<br />
 				<img src="logo.svg" alt="Godot Engine logo" width="1024" height="414" style="width: auto; height: auto; max-width: 85%; max-height: 250px" />
 				<br />
@@ -228,6 +276,14 @@
 				<br />
 				<a href="releases/">Need an old version?</a>
 				<br />
+				<br />
+				<br />
+				<label for="videoMode" style="margin-right: 1rem">Video driver:</label>
+				<select id="videoMode">
+					<option value="" selected="selected">Auto</option>
+					<option value="GLES2">WebGL</option>
+					<option value="GLES3">WebGL 2</option>
+				</select>
 				<br />
 				<br />
 				<label for="zip-file" style="margin-right: 1rem">Preload project ZIP:</label> <input id="zip-file" type="file" name="files" style="margin-bottom: 1rem"/>
@@ -239,7 +295,7 @@
 				<br />
 				<button class="btn" onclick="clearPersistence()" style="margin-bottom: 1.5rem">Clear persistent data</button>
 				<br />
-				<a href="https://docs.godotengine.org/en/3.3/getting_started/editor/using_the_web_editor.html">Web editor documentation</a>
+				<a href="https://docs.godotengine.org/en/3.4/tutorials/editor/using_the_web_editor.html">Web editor documentation</a>
 			</div>
 		</div>
 		<div id="tab-editor" style="display: none;">
@@ -274,7 +330,19 @@
 			if ("serviceWorker" in navigator) {
 				navigator.serviceWorker.register("service.worker.js");
 			}
+
+			if (localStorage.getItem("welcomeModalDismissed") !== 'true') {
+				document.getElementById("welcome-modal").style.display = "block";
+				document.getElementById("welcome-modal-dismiss").focus();
+			}
 		});
+
+		function closeWelcomeModal(dontShowAgain) {
+			document.getElementById("welcome-modal").style.display = "none";
+			if (dontShowAgain) {
+				localStorage.setItem("welcomeModalDismissed", 'true');
+			}
+		}
 	</script>
 	<script src="godot.tools.js"></script>
 	<script>//<![CDATA[
@@ -283,7 +351,7 @@
 		var game = null;
 		var setStatusMode;
 		var setStatusNotice;
-		var video_driver = "GLES2";
+		var video_driver = "";
 
 		function clearPersistence() {
 			function deleteDB(path) {
@@ -414,6 +482,15 @@
 			animationCallbacks.push(adjustCanvasDimensions);
 			adjustCanvasDimensions();
 
+			function replaceCanvas(from) {
+				const out = document.createElement("canvas");
+				out.id = from.id;
+				out.tabIndex = from.tabIndex;
+				from.parentNode.replaceChild(out, from);
+				lastScale = 0;
+				return out;
+			}
+
 			setStatusMode = function setStatusMode(mode) {
 				if (statusMode === mode || !initializing)
 					return;
@@ -469,6 +546,7 @@
 				'canvas': gameCanvas,
 				'canvasResizePolicy': 1,
 				'onExit': function () {
+					gameCanvas = replaceCanvas(gameCanvas);
 					setGameTabEnabled(false);
 					showTab('editor');
 					game = null;
@@ -483,7 +561,7 @@
 				const is_editor = args.filter(function(v) { return v == '--editor' || v == '-e' }).length != 0;
 				const is_project_manager = args.filter(function(v) { return v == '--project-manager' }).length != 0;
 				const is_game = !is_editor && !is_project_manager;
-				if (is_project_manager) {
+				if (video_driver) {
 					args.push('--video-driver', video_driver);
 				}
 				if (is_game) {
@@ -496,7 +574,7 @@
 					showTab('game');
 					game.init().then(function() {
 						requestAnimationFrame(function() {
-							game.start({'args': args}).then(function() {
+							game.start({'args': args, 'canvas': gameCanvas}).then(function() {
 								gameCanvas.focus();
 							});
 						});
@@ -511,7 +589,7 @@
 									showTab('loader');
 									setLoaderEnabled(true);
 								};
-								editor.start({'args': args, 'persistentDrops': is_project_manager});
+								editor.start({'args': args, 'persistentDrops': is_project_manager, 'canvas': editorCanvas});
 							});
 						}, 0);
 						OnEditorExit = null;
@@ -538,6 +616,7 @@
 				'canvas': editorCanvas,
 				'canvasResizePolicy': 0,
 				'onExit': function() {
+					editorCanvas = replaceCanvas(editorCanvas);
 					if (OnEditorExit) {
 						OnEditorExit();
 					}
@@ -569,10 +648,14 @@
 					} catch(e) {
 						// File exists
 					}
-					//selectVideoMode();
+					selectVideoMode();
 					showTab('editor');
 					setLoaderEnabled(false);
-					editor.start({'args': ['--project-manager', '--video-driver', video_driver], 'persistentDrops': true}).then(function() {
+					const args = ['--project-manager'];
+					if (video_driver) {
+						args.push('--video-driver', video_driver);
+					}
+					editor.start({'args': args, 'persistentDrops': true}).then(function() {
 						setStatusMode('hidden');
 						initializing = false;
 					});

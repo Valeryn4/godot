@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -42,7 +42,6 @@ import javax.microedition.khronos.egl.EGLDisplay;
  * Used to select the egl config for pancake games.
  */
 public class RegularConfigChooser implements GLSurfaceView.EGLConfigChooser {
-
 	private static final String TAG = RegularConfigChooser.class.getSimpleName();
 
 	private int[] mValue = new int[1];
@@ -81,7 +80,6 @@ public class RegularConfigChooser implements GLSurfaceView.EGLConfigChooser {
 	}
 
 	public EGLConfig chooseConfig(EGL10 egl, EGLDisplay display) {
-
 		/* Get the number of minimally matching EGL configurations
 		 */
 		int[] num_config = new int[1];
@@ -136,7 +134,6 @@ public class RegularConfigChooser implements GLSurfaceView.EGLConfigChooser {
 
 	private int findConfigAttrib(EGL10 egl, EGLDisplay display,
 			EGLConfig config, int attribute, int defaultValue) {
-
 		if (egl.eglGetConfigAttrib(display, config, attribute, mValue)) {
 			return mValue[0];
 		}

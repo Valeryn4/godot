@@ -149,7 +149,7 @@ def setup_msvc_auto(env):
     env["TARGET_ARCH"] = None
     if env["bits"] != "default":
         env["TARGET_ARCH"] = {"32": "x86", "64": "x86_64"}[env["bits"]]
-    if env.has_key("msvc_version"):
+    if "msvc_version" in env:
         env["MSVC_VERSION"] = env["msvc_version"]
     env.Tool("msvc")
     env.Tool("mssdk")  # we want the MS SDK
@@ -168,7 +168,6 @@ def setup_mingw(env):
     """Set up env for use with mingw"""
     # Nothing to do here
     print("Using MinGW")
-    pass
 
 
 def configure_msvc(env, manual_msvc_config):
@@ -184,9 +183,6 @@ def configure_msvc(env, manual_msvc_config):
             env.Append(CCFLAGS=["/O1"])
             env.Append(LINKFLAGS=["/OPT:REF"])
 
-        env.Append(LINKFLAGS=["/SUBSYSTEM:WINDOWS"])
-        env.Append(LINKFLAGS=["/ENTRY:mainCRTStartup"])
-
     elif env["target"] == "release_debug":
         if env["optimize"] == "speed":  # optimize for speed (default)
             env.Append(CCFLAGS=["/O2"])
@@ -194,14 +190,15 @@ def configure_msvc(env, manual_msvc_config):
         elif env["optimize"] == "size":  # optimize for size
             env.Append(CCFLAGS=["/O1"])
             env.Append(LINKFLAGS=["/OPT:REF"])
-        env.AppendUnique(CPPDEFINES=["DEBUG_ENABLED"])
-        env.Append(LINKFLAGS=["/SUBSYSTEM:CONSOLE"])
 
     elif env["target"] == "debug":
         env.AppendUnique(CCFLAGS=["/Zi", "/FS", "/Od", "/EHsc"])
-        env.AppendUnique(CPPDEFINES=["DEBUG_ENABLED"])
-        env.Append(LINKFLAGS=["/SUBSYSTEM:CONSOLE"])
+        # Allow big objects. Only needed for debug, see MinGW branch for rationale.
+        env.AppendUnique(CCFLAGS=["/bigobj"])
         env.Append(LINKFLAGS=["/DEBUG"])
+
+    env.Append(LINKFLAGS=["/SUBSYSTEM:WINDOWS"])
+    env.Append(LINKFLAGS=["/ENTRY:mainCRTStartup"])
 
     if env["debug_symbols"]:
         env.AppendUnique(CCFLAGS=["/Zi", "/FS"])
@@ -215,9 +212,9 @@ def configure_msvc(env, manual_msvc_config):
         env.AppendUnique(CCFLAGS=["/MD"])
 
     env.AppendUnique(CCFLAGS=["/Gd", "/GR", "/nologo"])
-    # Force to use Unicode encoding
-    env.AppendUnique(CCFLAGS=["/utf-8"])
+    env.AppendUnique(CCFLAGS=["/utf-8"])  # Force to use Unicode encoding.
     env.AppendUnique(CXXFLAGS=["/TP"])  # assume all sources are C++
+
     if manual_msvc_config:  # should be automatic if SCons found it
         if os.getenv("WindowsSdkDir") is not None:
             env.Prepend(CPPPATH=[os.getenv("WindowsSdkDir") + "/Include"])
@@ -317,14 +314,11 @@ def configure_mingw(env):
                 env.Append(CCFLAGS=["-O2"])
         else:  # optimize for size
             env.Prepend(CCFLAGS=["-Os"])
-        env.Append(LINKFLAGS=["-Wl,--subsystem,windows"])
-
         if env["debug_symbols"]:
             env.Prepend(CCFLAGS=["-g2"])
 
     elif env["target"] == "release_debug":
         env.Append(CCFLAGS=["-O2"])
-        env.Append(CPPDEFINES=["DEBUG_ENABLED"])
         if env["debug_symbols"]:
             env.Prepend(CCFLAGS=["-g2"])
         if env["optimize"] == "speed":  # optimize for speed (default)
@@ -334,7 +328,12 @@ def configure_mingw(env):
 
     elif env["target"] == "debug":
         env.Append(CCFLAGS=["-g3"])
-        env.Append(CPPDEFINES=["DEBUG_ENABLED"])
+        # Allow big objects. It's supposed not to have drawbacks but seems to break
+        # GCC LTO, so enabling for debug builds only (which are not built with LTO
+        # and are the only ones with too big objects).
+        env.Append(CCFLAGS=["-Wa,-mbig-obj"])
+
+    env.Append(LINKFLAGS=["-Wl,--subsystem,windows"])
 
     ## Compiler configuration
 

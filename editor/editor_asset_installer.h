@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,11 +34,12 @@
 #include "scene/gui/dialogs.h"
 #include "scene/gui/tree.h"
 class EditorAssetInstaller : public ConfirmationDialog {
-
 	GDCLASS(EditorAssetInstaller, ConfirmationDialog);
 
 	Tree *tree;
+	Label *asset_contents;
 	String package_path;
+	String asset_name;
 	AcceptDialog *error;
 	Map<String, TreeItem *> status_map;
 	bool updating;
@@ -52,6 +53,10 @@ protected:
 
 public:
 	void open(const String &p_path, int p_depth = 0);
+
+	void set_asset_name(const String &p_asset_name);
+	String get_asset_name() const;
+
 	EditorAssetInstaller();
 };
 

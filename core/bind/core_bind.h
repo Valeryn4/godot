@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -164,6 +164,7 @@ public:
 
 	void set_clipboard(const String &p_text);
 	String get_clipboard() const;
+	bool has_clipboard() const;
 
 	void set_video_mode(const Size2 &p_size, bool p_fullscreen, bool p_resizeable, int p_screen = 0);
 	Size2 get_video_mode(int p_screen = 0) const;
@@ -241,7 +242,7 @@ public:
 	int get_low_processor_usage_mode_sleep_usec() const;
 
 	String get_executable_path() const;
-	int execute(const String &p_path, const Vector<String> &p_arguments, bool p_blocking = true, Array p_output = Array(), bool p_read_stderr = false);
+	int execute(const String &p_path, const Vector<String> &p_arguments, bool p_blocking = true, Array p_output = Array(), bool p_read_stderr = false, bool p_open_console = false);
 
 	Error kill(int p_pid);
 	Error shell_open(String p_uri);
@@ -256,12 +257,14 @@ public:
 	Vector<String> get_cmdline_args();
 
 	String get_locale() const;
+	String get_locale_language() const;
 	String get_latin_keyboard_variant() const;
 	int keyboard_get_layout_count() const;
 	int keyboard_get_current_layout() const;
 	void keyboard_set_current_layout(int p_index);
 	String keyboard_get_layout_language(int p_index) const;
 	String keyboard_get_layout_name(int p_index) const;
+	uint32_t keyboard_get_scancode_from_physical(uint32_t p_scancode) const;
 
 	String get_model_name() const;
 
@@ -311,7 +314,7 @@ public:
 
 	void delay_usec(int p_usec) const;
 	void delay_msec(int p_msec) const;
-	uint32_t get_ticks_msec() const;
+	uint64_t get_ticks_msec() const;
 	uint64_t get_ticks_usec() const;
 	uint32_t get_splash_tick_msec() const;
 
@@ -347,11 +350,15 @@ public:
 		SCREEN_ORIENTATION_SENSOR,
 	};
 
-	String get_system_dir(SystemDir p_dir) const;
+	String get_system_dir(SystemDir p_dir, bool p_shared_storage = true) const;
 
 	String get_user_data_dir() const;
+	String get_config_dir() const;
+	String get_data_dir() const;
+	String get_cache_dir() const;
 
 	void alert(const String &p_alert, const String &p_title = "ALERT!");
+	void crash(const String &p_message);
 
 	void set_screen_orientation(ScreenOrientation p_orientation);
 	ScreenOrientation get_screen_orientation() const;
@@ -363,12 +370,16 @@ public:
 
 	Error set_thread_name(const String &p_name);
 	Thread::ID get_thread_caller_id() const;
+	Thread::ID get_main_thread_id() const;
 
 	void set_use_vsync(bool p_enable);
 	bool is_vsync_enabled() const;
 
 	void set_vsync_via_compositor(bool p_enable);
 	bool is_vsync_via_compositor_enabled() const;
+
+	void set_delta_smoothing(bool p_enabled);
+	bool is_delta_smoothing_enabled() const;
 
 	PowerState get_power_state();
 	int get_power_seconds_left();
@@ -399,7 +410,6 @@ VARIANT_ENUM_CAST(_OS::ScreenOrientation);
 VARIANT_ENUM_CAST(_OS::HandleType);
 
 class _Geometry : public Object {
-
 	GDCLASS(_Geometry, Object);
 
 	static _Geometry *singleton;
@@ -480,7 +490,6 @@ VARIANT_ENUM_CAST(_Geometry::PolyJoinType);
 VARIANT_ENUM_CAST(_Geometry::PolyEndType);
 
 class _File : public Reference {
-
 	GDCLASS(_File, Reference);
 	FileAccess *f;
 	bool eswap;
@@ -518,8 +527,8 @@ public:
 
 	void seek(int64_t p_position); // Seek to a given position.
 	void seek_end(int64_t p_position = 0); // Seek from the end of file.
-	int64_t get_position() const; // Get position in the file.
-	int64_t get_len() const; // Get size of the file.
+	uint64_t get_position() const; // Get position in the file.
+	uint64_t get_len() const; // Get size of the file.
 
 	bool eof_reached() const; // Reading passed EOF.
 
@@ -534,7 +543,7 @@ public:
 
 	Variant get_var(bool p_allow_objects = false) const;
 
-	PoolVector<uint8_t> get_buffer(int p_length) const; // Get an array of bytes.
+	PoolVector<uint8_t> get_buffer(int64_t p_length) const; // Get an array of bytes.
 	String get_line() const;
 	Vector<String> get_csv_line(const String &p_delim = ",") const;
 	String get_as_text() const;
@@ -583,7 +592,6 @@ VARIANT_ENUM_CAST(_File::ModeFlags);
 VARIANT_ENUM_CAST(_File::CompressionMode);
 
 class _Directory : public Reference {
-
 	GDCLASS(_Directory, Reference);
 	DirAccess *d;
 
@@ -612,7 +620,7 @@ public:
 	bool file_exists(String p_file);
 	bool dir_exists(String p_dir);
 
-	int get_space_left();
+	uint64_t get_space_left();
 
 	Error copy(String p_from, String p_to);
 	Error rename(String p_from, String p_to);
@@ -627,7 +635,6 @@ private:
 };
 
 class _Marshalls : public Object {
-
 	GDCLASS(_Marshalls, Object);
 
 	static _Marshalls *singleton;
@@ -648,11 +655,10 @@ public:
 	String base64_to_utf8(const String &p_str);
 
 	_Marshalls() { singleton = this; }
-	~_Marshalls() { singleton = NULL; }
+	~_Marshalls() { singleton = nullptr; }
 };
 
 class _Mutex : public Reference {
-
 	GDCLASS(_Mutex, Reference);
 	Mutex mutex;
 
@@ -665,7 +671,6 @@ public:
 };
 
 class _Semaphore : public Reference {
-
 	GDCLASS(_Semaphore, Reference);
 	Semaphore semaphore;
 
@@ -677,14 +682,13 @@ public:
 };
 
 class _Thread : public Reference {
-
 	GDCLASS(_Thread, Reference);
 
 protected:
 	Variant ret;
 	Variant userdata;
-	SafeFlag active;
-	Object *target_instance;
+	SafeFlag running;
+	ObjectID target_instance_id;
 	StringName target_method;
 	Thread thread;
 	static void _bind_methods();
@@ -702,6 +706,7 @@ public:
 	Error start(Object *p_instance, const StringName &p_method, const Variant &p_userdata = Variant(), Priority p_priority = PRIORITY_NORMAL);
 	String get_id() const;
 	bool is_active() const;
+	bool is_alive() const;
 	Variant wait_to_finish();
 
 	_Thread();
@@ -711,7 +716,6 @@ public:
 VARIANT_ENUM_CAST(_Thread::Priority);
 
 class _ClassDB : public Object {
-
 	GDCLASS(_ClassDB, Object);
 
 protected:
@@ -742,6 +746,11 @@ public:
 	bool has_integer_constant(const StringName &p_class, const StringName &p_name) const;
 	int get_integer_constant(const StringName &p_class, const StringName &p_name) const;
 	StringName get_category(const StringName &p_node) const;
+
+	bool has_enum(const StringName &p_class, const StringName &p_name, bool p_no_inheritance = false) const;
+	PoolStringArray get_enum_list(const StringName &p_class, bool p_no_inheritance = false) const;
+	PoolStringArray get_enum_constants(const StringName &p_class, const StringName &p_enum, bool p_no_inheritance = false) const;
+	StringName get_integer_constant_enum(const StringName &p_class, const StringName &p_name, bool p_no_inheritance = false) const;
 
 	bool is_class_enabled(StringName p_class) const;
 
@@ -793,6 +802,9 @@ public:
 
 	void set_editor_hint(bool p_enabled);
 	bool is_editor_hint() const;
+
+	void set_print_error_messages(bool p_enabled);
+	bool is_printing_error_messages() const;
 
 	_Engine();
 };

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -48,6 +48,9 @@ private:
 	jclass activity_class;
 
 	jmethodID _on_video_init = 0;
+	jmethodID _create_offscreen_gl = 0;
+	jmethodID _destroy_offscreen_gl = 0;
+	jmethodID _set_offscreen_gl_current = 0;
 	jmethodID _restart = 0;
 	jmethodID _finish = 0;
 	jmethodID _set_keep_screen_on = 0;
@@ -55,6 +58,7 @@ private:
 	jmethodID _get_GLES_version_code = 0;
 	jmethodID _get_clipboard = 0;
 	jmethodID _set_clipboard = 0;
+	jmethodID _has_clipboard = 0;
 	jmethodID _request_permission = 0;
 	jmethodID _request_permissions = 0;
 	jmethodID _get_granted_permissions = 0;
@@ -77,6 +81,9 @@ public:
 	jobject get_class_loader();
 
 	void gfx_init(bool gl2);
+	bool create_offscreen_gl(JNIEnv *p_env);
+	void destroy_offscreen_gl(JNIEnv *p_env);
+	void set_offscreen_gl_current(JNIEnv *p_env, bool p_current);
 	void on_video_init(JNIEnv *p_env = NULL);
 	void on_godot_setup_completed(JNIEnv *p_env = NULL);
 	void on_godot_main_loop_started(JNIEnv *p_env = NULL);
@@ -89,6 +96,8 @@ public:
 	String get_clipboard();
 	bool has_set_clipboard();
 	void set_clipboard(const String &p_text);
+	bool has_has_clipboard();
+	bool has_clipboard();
 	bool request_permission(const String &p_name);
 	bool request_permissions();
 	Vector<String> get_granted_permissions() const;

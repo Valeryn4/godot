@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -40,7 +40,6 @@
 
 class Camera;
 class AudioStreamPlayer3D : public Spatial {
-
 	GDCLASS(AudioStreamPlayer3D, Spatial);
 
 public:
@@ -70,7 +69,6 @@ private:
 	};
 
 	struct Output {
-
 		AudioFilterSW filter;
 		AudioFilterSW::Processor filter_process[8];
 		AudioFrame vol[4];
@@ -83,7 +81,7 @@ private:
 
 		Output() {
 			filter_gain = 0;
-			viewport = NULL;
+			viewport = nullptr;
 			reverb_bus_index = -1;
 			bus_index = -1;
 		}

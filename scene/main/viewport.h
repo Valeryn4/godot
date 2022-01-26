@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -40,6 +40,7 @@
 class Camera;
 class Camera2D;
 class Listener;
+class Listener2D;
 class Control;
 class CanvasItem;
 class CanvasLayer;
@@ -48,9 +49,9 @@ class Label;
 class Timer;
 class Viewport;
 class CollisionObject;
+class SceneTreeTimer;
 
 class ViewportTexture : public Texture {
-
 	GDCLASS(ViewportTexture, Texture);
 
 	NodePath path;
@@ -87,7 +88,6 @@ public:
 };
 
 class Viewport : public Node {
-
 	GDCLASS(Viewport, Node);
 
 public:
@@ -182,6 +182,7 @@ private:
 
 	Camera *camera;
 	Set<Camera *> cameras;
+	Listener2D *listener_2d = nullptr;
 	Set<CanvasLayer *> canvas_layers;
 
 	RID viewport;
@@ -224,7 +225,7 @@ private:
 	bool snap_controls_to_pixels;
 
 	bool physics_object_picking;
-	List<Ref<InputEvent> > physics_picking_events;
+	List<Ref<InputEvent>> physics_picking_events;
 	ObjectID physics_object_capture;
 	ObjectID physics_object_over;
 	Transform physics_last_object_transform;
@@ -233,7 +234,6 @@ private:
 	bool physics_has_last_mousepos;
 	Vector2 physics_last_mousepos;
 	struct {
-
 		bool alt;
 		bool control;
 		bool shift;
@@ -284,7 +284,9 @@ private:
 	MSAA msaa;
 	bool use_fxaa;
 	bool use_debanding;
+	float sharpen_intensity;
 	bool hdr;
+	bool use_32_bpc_depth;
 
 	Ref<ViewportTexture> default_texture;
 	Set<ViewportTexture *> viewport_textures;
@@ -308,7 +310,7 @@ private:
 		bool drag_attempted;
 		Variant drag_data;
 		ObjectID drag_preview_id;
-		float tooltip_timer;
+		Ref<SceneTreeTimer> tooltip_timer;
 		float tooltip_delay;
 		List<Control *> modal_stack;
 		Transform2D focus_inv_xform;
@@ -360,7 +362,7 @@ private:
 	void _gui_remove_root_control(List<Control *>::Element *RI);
 	void _gui_remove_subwindow_control(List<Control *>::Element *SI);
 
-	String _gui_get_tooltip(Control *p_control, const Vector2 &p_pos, Control **r_tooltip_owner = NULL);
+	String _gui_get_tooltip(Control *p_control, const Vector2 &p_pos, Control **r_tooltip_owner = nullptr);
 	void _gui_cancel_tooltip();
 	void _gui_show_tooltip();
 
@@ -402,6 +404,10 @@ private:
 	void _camera_remove(Camera *p_camera);
 	void _camera_make_next_current(Camera *p_exclude);
 
+	friend class Listener2D;
+	void _listener_2d_set(Listener2D *p_listener);
+	void _listener_2d_remove(Listener2D *p_listener);
+
 	friend class CanvasLayer;
 	void _canvas_layer_add(CanvasLayer *p_canvas_layer);
 	void _canvas_layer_remove(CanvasLayer *p_canvas_layer);
@@ -438,6 +444,7 @@ public:
 	void set_as_audio_listener(bool p_enable);
 	bool is_audio_listener() const;
 
+	Listener2D *get_listener_2d() const;
 	void set_as_audio_listener_2d(bool p_enable);
 	bool is_audio_listener_2d() const;
 
@@ -505,8 +512,14 @@ public:
 	void set_use_debanding(bool p_debanding);
 	bool get_use_debanding() const;
 
+	void set_sharpen_intensity(float p_intensity);
+	float get_sharpen_intensity() const;
+
 	void set_hdr(bool p_hdr);
 	bool get_hdr() const;
+
+	void set_use_32_bpc_depth(bool p_enable);
+	bool is_using_32_bpc_depth() const;
 
 	Vector2 get_camera_coords(const Vector2 &p_viewport_coords) const;
 	Vector2 get_camera_rect_size() const;

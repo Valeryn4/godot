@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -36,6 +36,7 @@
 #if !defined(NO_THREADS)
 
 #include <atomic>
+#include <type_traits>
 
 // Design goals for these classes:
 // - No automatic conversions or arithmetic operators,
@@ -51,7 +52,7 @@
 #define SAFE_NUMERIC_TYPE_PUN_GUARANTEES(m_type)                        \
 	static_assert(sizeof(SafeNumeric<m_type>) == sizeof(m_type), "");   \
 	static_assert(alignof(SafeNumeric<m_type>) == alignof(m_type), ""); \
-	static_assert(std::is_trivially_destructible<std::atomic<m_type> >::value, "");
+	static_assert(std::is_trivially_destructible<std::atomic<m_type>>::value, "");
 
 #if defined(DEBUG_ENABLED)
 void check_lockless_atomics();

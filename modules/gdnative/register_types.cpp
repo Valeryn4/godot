@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -53,7 +53,6 @@
 #include "gdnative_library_singleton_editor.h"
 
 class GDNativeExportPlugin : public EditorExportPlugin {
-
 protected:
 	virtual void _export_file(const String &p_path, const String &p_type, const Set<String> &p_features);
 };
@@ -77,7 +76,6 @@ void GDNativeExportPlugin::_export_file(const String &p_path, const String &p_ty
 	Ref<ConfigFile> config = lib->get_config_file();
 
 	{
-
 		List<String> entry_keys;
 		config->get_section_keys("entry", &entry_keys);
 
@@ -144,6 +142,8 @@ void GDNativeExportPlugin::_export_file(const String &p_path, const String &p_ty
 		}
 	}
 
+	// Add symbols for staticaly linked libraries on iOS
+	if (p_features.has("iOS")) {
 	// Add symbols for staticaly linked libraries on tvOS/iOS
 	if (p_features.has("iOS") || p_features.has("tvOS")) {
 
@@ -240,7 +240,6 @@ void GDNativeExportPlugin::_export_file(const String &p_path, const String &p_ty
 }
 
 static void editor_init_callback() {
-
 	GDNativeLibrarySingletonEditor *library_editor = memnew(GDNativeLibrarySingletonEditor);
 	library_editor->set_name(TTR("GDNative"));
 	ProjectSettingsEditor::get_singleton()->get_tabs()->add_child(library_editor);
@@ -256,7 +255,6 @@ static void editor_init_callback() {
 #endif
 
 static godot_variant cb_standard_varcall(void *p_procedure_handle, godot_array *p_args) {
-
 	godot_gdnative_procedure_fn proc;
 	proc = (godot_gdnative_procedure_fn)p_procedure_handle;
 
@@ -265,13 +263,12 @@ static godot_variant cb_standard_varcall(void *p_procedure_handle, godot_array *
 
 GDNativeCallRegistry *GDNativeCallRegistry::singleton;
 
-Vector<Ref<GDNative> > singleton_gdnatives;
+Vector<Ref<GDNative>> singleton_gdnatives;
 
 Ref<GDNativeLibraryResourceLoader> resource_loader_gdnlib;
 Ref<GDNativeLibraryResourceSaver> resource_saver_gdnlib;
 
 void register_gdnative_types() {
-
 #ifdef TOOLS_ENABLED
 
 	EditorNode::add_init_callback(editor_init_callback);
@@ -310,8 +307,9 @@ void register_gdnative_types() {
 	for (int i = 0; i < singletons.size(); i++) {
 		String path = singletons[i];
 
-		if (excluded.has(path))
+		if (excluded.has(path)) {
 			continue;
+		}
 
 		Ref<GDNativeLibrary> lib = ResourceLoader::load(path);
 		Ref<GDNative> singleton;
@@ -329,7 +327,7 @@ void register_gdnative_types() {
 				proc_ptr);
 
 		if (err != OK) {
-			ERR_PRINTS("No " + lib->get_symbol_prefix() + "gdnative_singleton in \"" + singleton->get_library()->get_current_library_path() + "\" found");
+			ERR_PRINT("No " + lib->get_symbol_prefix() + "gdnative_singleton in \"" + singleton->get_library()->get_current_library_path() + "\" found");
 		} else {
 			singleton_gdnatives.push_back(singleton);
 			((void (*)())proc_ptr)();
@@ -338,9 +336,7 @@ void register_gdnative_types() {
 }
 
 void unregister_gdnative_types() {
-
 	for (int i = 0; i < singleton_gdnatives.size(); i++) {
-
 		if (singleton_gdnatives[i].is_null()) {
 			continue;
 		}

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -46,6 +46,7 @@ private:
 	jclass cls;
 
 	jmethodID _open_URI = 0;
+	jmethodID _get_cache_dir = 0;
 	jmethodID _get_data_dir = 0;
 	jmethodID _get_locale = 0;
 	jmethodID _get_model = 0;
@@ -57,10 +58,6 @@ private:
 	jmethodID _set_screen_orientation = 0;
 	jmethodID _get_screen_orientation = 0;
 	jmethodID _get_system_dir = 0;
-	jmethodID _play_video = 0;
-	jmethodID _is_video_playing = 0;
-	jmethodID _pause_video = 0;
-	jmethodID _stop_video = 0;
 
 public:
 	GodotIOJavaWrapper(JNIEnv *p_env, jobject p_godot_io_instance);
@@ -69,6 +66,7 @@ public:
 	jobject get_instance();
 
 	Error open_uri(const String &p_uri);
+	String get_cache_dir();
 	String get_user_data_dir();
 	String get_locale();
 	String get_model();
@@ -82,11 +80,7 @@ public:
 	void set_vk_height(int p_height);
 	void set_screen_orientation(int p_orient);
 	int get_screen_orientation() const;
-	String get_system_dir(int p_dir);
-	void play_video(const String &p_path);
-	bool is_video_playing();
-	void pause_video();
-	void stop_video();
+	String get_system_dir(int p_dir, bool p_shared_storage);
 };
 
 #endif /* !JAVA_GODOT_IO_WRAPPER_H */

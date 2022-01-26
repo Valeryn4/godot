@@ -19,40 +19,42 @@ def can_build():
     # Check the minimal dependencies
     x11_error = os.system("pkg-config --version > /dev/null")
     if x11_error:
+        print("Error: pkg-config not found. Aborting.")
         return False
 
-    x11_error = os.system("pkg-config x11 --modversion > /dev/null ")
+    x11_error = os.system("pkg-config x11 --modversion > /dev/null")
     if x11_error:
+        print("Error: X11 libraries not found. Aborting.")
         return False
 
-    x11_error = os.system("pkg-config xcursor --modversion > /dev/null ")
+    x11_error = os.system("pkg-config xcursor --modversion > /dev/null")
     if x11_error:
-        print("xcursor not found.. x11 disabled.")
+        print("Error: Xcursor library not found. Aborting.")
         return False
 
-    x11_error = os.system("pkg-config xinerama --modversion > /dev/null ")
+    x11_error = os.system("pkg-config xinerama --modversion > /dev/null")
     if x11_error:
-        print("xinerama not found.. x11 disabled.")
+        print("Error: Xinerama library not found. Aborting.")
         return False
 
-    x11_error = os.system("pkg-config xext --modversion > /dev/null ")
+    x11_error = os.system("pkg-config xext --modversion > /dev/null")
     if x11_error:
-        print("xext not found.. x11 disabled.")
+        print("Error: Xext library not found. Aborting.")
         return False
 
-    x11_error = os.system("pkg-config xrandr --modversion > /dev/null ")
+    x11_error = os.system("pkg-config xrandr --modversion > /dev/null")
     if x11_error:
-        print("xrandr not found.. x11 disabled.")
+        print("Error: XrandR library not found. Aborting.")
         return False
 
-    x11_error = os.system("pkg-config xrender --modversion > /dev/null ")
+    x11_error = os.system("pkg-config xrender --modversion > /dev/null")
     if x11_error:
-        print("xrender not found.. x11 disabled.")
+        print("Error: XRender library not found. Aborting.")
         return False
 
-    x11_error = os.system("pkg-config xi --modversion > /dev/null ")
+    x11_error = os.system("pkg-config xi --modversion > /dev/null")
     if x11_error:
-        print("xi not found.. Aborting.")
+        print("Error: Xi library not found. Aborting.")
         return False
 
     return True
@@ -102,15 +104,12 @@ def configure(env):
         elif env["optimize"] == "size":  # optimize for size
             env.Prepend(CCFLAGS=["-Os"])
 
-        env.Prepend(CPPDEFINES=["DEBUG_ENABLED"])
-
         if env["debug_symbols"]:
             env.Prepend(CCFLAGS=["-g2"])
 
     elif env["target"] == "debug":
         env.Prepend(CCFLAGS=["-ggdb"])
         env.Prepend(CCFLAGS=["-g3"])
-        env.Prepend(CPPDEFINES=["DEBUG_ENABLED"])
         env.Append(LINKFLAGS=["-rdynamic"])
 
     ## Architecture
@@ -118,6 +117,21 @@ def configure(env):
     is64 = sys.maxsize > 2 ** 32
     if env["bits"] == "default":
         env["bits"] = "64" if is64 else "32"
+
+    machines = {
+        "riscv64": "rv64",
+        "ppc64le": "ppc64",
+        "ppc64": "ppc64",
+        "ppcle": "ppc",
+        "ppc": "ppc",
+    }
+
+    if env["arch"] == "" and platform.machine() in machines:
+        env["arch"] = machines[platform.machine()]
+
+    if env["arch"] == "rv64":
+        # G = General-purpose extensions, C = Compression extension (very common).
+        env.Append(CCFLAGS=["-march=rv64gc"])
 
     ## Compiler configuration
 
@@ -138,7 +152,7 @@ def configure(env):
                 # A convenience so you don't need to write use_lto too when using SCons
                 env["use_lto"] = True
         else:
-            print("Using LLD with GCC is not supported yet, try compiling with 'use_llvm=yes'.")
+            print("Using LLD with GCC is not supported yet. Try compiling with 'use_llvm=yes'.")
             sys.exit(255)
 
     if env["use_ubsan"] or env["use_asan"] or env["use_lsan"] or env["use_tsan"] or env["use_msan"]:
@@ -237,15 +251,17 @@ def configure(env):
         env.ParseConfig("pkg-config libpng16 --cflags --libs")
 
     if not env["builtin_bullet"]:
-        # We need at least version 2.89
+        # We need at least version 2.90
+        min_bullet_version = "2.90"
+
         import subprocess
 
         bullet_version = subprocess.check_output(["pkg-config", "bullet", "--modversion"]).strip()
-        if str(bullet_version) < "2.89":
+        if str(bullet_version) < min_bullet_version:
             # Abort as system bullet was requested but too old
             print(
                 "Bullet: System version {0} does not match minimal requirements ({1}). Aborting.".format(
-                    bullet_version, "2.89"
+                    bullet_version, min_bullet_version
                 )
             )
             sys.exit(255)
@@ -310,31 +326,33 @@ def configure(env):
     if not env["builtin_pcre2"]:
         env.ParseConfig("pkg-config libpcre2-32 --cflags --libs")
 
+    # Embree is only used in tools build on x86_64 and aarch64.
+    if env["tools"] and not env["builtin_embree"] and is64:
+        # No pkgconfig file so far, hardcode expected lib name.
+        env.Append(LIBS=["embree3"])
+
     ## Flags
 
     if os.system("pkg-config --exists alsa") == 0:  # 0 means found
-        print("Enabling ALSA")
         env["alsa"] = True
         env.Append(CPPDEFINES=["ALSA_ENABLED", "ALSAMIDI_ENABLED"])
     else:
-        print("ALSA libraries not found, disabling driver")
+        print("Warning: ALSA libraries not found. Disabling the ALSA audio driver.")
 
     if env["pulseaudio"]:
         if os.system("pkg-config --exists libpulse") == 0:  # 0 means found
-            print("Enabling PulseAudio")
             env.Append(CPPDEFINES=["PULSEAUDIO_ENABLED"])
             env.ParseConfig("pkg-config --cflags libpulse")
         else:
-            print("PulseAudio development libraries not found, disabling driver")
+            print("Warning: PulseAudio development libraries not found. Disabling the PulseAudio audio driver.")
 
     if platform.system() == "Linux":
         env.Append(CPPDEFINES=["JOYDEV_ENABLED"])
         if env["udev"]:
             if os.system("pkg-config --exists libudev") == 0:  # 0 means found
-                print("Enabling udev support")
                 env.Append(CPPDEFINES=["UDEV_ENABLED"])
             else:
-                print("libudev development libraries not found, disabling udev support")
+                print("Warning: libudev development libraries not found. Disabling controller hotplugging support.")
     else:
         env["udev"] = False  # Linux specific
 
@@ -343,7 +361,7 @@ def configure(env):
         env.ParseConfig("pkg-config zlib --cflags --libs")
 
     env.Prepend(CPPPATH=["#platform/x11"])
-    env.Append(CPPDEFINES=["X11_ENABLED", "UNIX_ENABLED", "OPENGL_ENABLED", "GLES_ENABLED"])
+    env.Append(CPPDEFINES=["X11_ENABLED", "UNIX_ENABLED", "OPENGL_ENABLED", "GLES_ENABLED", ("_FILE_OFFSET_BITS", 64)])
     env.Append(LIBS=["GL", "pthread"])
 
     if platform.system() == "Linux":
@@ -363,7 +381,7 @@ def configure(env):
         gnu_ld_version = re.search("^GNU ld [^$]*(\d+\.\d+)$", linker_version_str, re.MULTILINE)
         if not gnu_ld_version:
             print(
-                "Warning: Creating template binaries enabled for PCK embedding is currently only supported with GNU ld"
+                "Warning: Creating template binaries enabled for PCK embedding is currently only supported with GNU ld, not gold or LLD."
             )
         else:
             if float(gnu_ld_version.group(1)) >= 2.30:
@@ -382,13 +400,10 @@ def configure(env):
 
     # Link those statically for portability
     if env["use_static_cpp"]:
-        # Workaround for GH-31743, Ubuntu 18.04 i386 crashes when it's used.
-        # That doesn't make any sense but it's likely a Ubuntu bug?
-        if is64 or env["bits"] == "64":
-            env.Append(LINKFLAGS=["-static-libgcc", "-static-libstdc++"])
-        if env["use_llvm"]:
+        env.Append(LINKFLAGS=["-static-libgcc", "-static-libstdc++"])
+        if env["use_llvm"] and platform.system() != "FreeBSD":
             env["LINKCOM"] = env["LINKCOM"] + " -l:libatomic.a"
 
     else:
-        if env["use_llvm"]:
+        if env["use_llvm"] and platform.system() != "FreeBSD":
             env.Append(LIBS=["atomic"])

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -77,6 +77,7 @@ public:
 		EMISSION_SHAPE_BOX,
 		EMISSION_SHAPE_POINTS,
 		EMISSION_SHAPE_DIRECTED_POINTS,
+		EMISSION_SHAPE_RING,
 		EMISSION_SHAPE_MAX
 	};
 
@@ -93,6 +94,7 @@ private:
 		float scale_rand;
 		float hue_rot_rand;
 		float anim_offset_rand;
+		Color start_color_rand;
 		float time;
 		float lifetime;
 		Color base_color;
@@ -124,7 +126,6 @@ private:
 		const Particle *particles;
 		Vector3 axis;
 		bool operator()(int p_a, int p_b) const {
-
 			return axis.dot(particles[p_a].transform.origin) < axis.dot(particles[p_b].transform.origin);
 		}
 	};
@@ -163,6 +164,7 @@ private:
 	Ref<Curve> curve_parameters[PARAM_MAX];
 	Color color;
 	Ref<Gradient> color_ramp;
+	Ref<Gradient> color_initial_ramp;
 
 	bool flags[FLAG_MAX];
 
@@ -173,6 +175,10 @@ private:
 	PoolVector<Vector3> emission_normals;
 	PoolVector<Color> emission_colors;
 	int emission_point_count;
+	float emission_ring_height;
+	float emission_ring_inner_radius;
+	float emission_ring_radius;
+	Vector3 emission_ring_axis;
 
 	Vector3 gravity;
 
@@ -203,7 +209,6 @@ public:
 	void set_explosiveness_ratio(float p_ratio);
 	void set_randomness_ratio(float p_ratio);
 	void set_lifetime_randomness(float p_random);
-	void set_visibility_aabb(const AABB &p_aabb);
 	void set_use_local_coordinates(bool p_enable);
 	void set_speed_scale(float p_scale);
 
@@ -215,7 +220,6 @@ public:
 	float get_explosiveness_ratio() const;
 	float get_randomness_ratio() const;
 	float get_lifetime_randomness() const;
-	AABB get_visibility_aabb() const;
 	bool get_use_local_coordinates() const;
 	float get_speed_scale() const;
 
@@ -227,9 +231,6 @@ public:
 
 	void set_draw_order(DrawOrder p_order);
 	DrawOrder get_draw_order() const;
-
-	void set_draw_passes(int p_count);
-	int get_draw_passes() const;
 
 	void set_mesh(const Ref<Mesh> &p_mesh);
 	Ref<Mesh> get_mesh() const;
@@ -260,6 +261,9 @@ public:
 	void set_color_ramp(const Ref<Gradient> &p_ramp);
 	Ref<Gradient> get_color_ramp() const;
 
+	void set_color_initial_ramp(const Ref<Gradient> &p_ramp);
+	Ref<Gradient> get_color_initial_ramp() const;
+
 	void set_particle_flag(Flags p_flag, bool p_enable);
 	bool get_particle_flag(Flags p_flag) const;
 
@@ -269,7 +273,10 @@ public:
 	void set_emission_points(const PoolVector<Vector3> &p_points);
 	void set_emission_normals(const PoolVector<Vector3> &p_normals);
 	void set_emission_colors(const PoolVector<Color> &p_colors);
-	void set_emission_point_count(int p_count);
+	void set_emission_ring_height(float p_height);
+	void set_emission_ring_inner_radius(float p_inner_radius);
+	void set_emission_ring_radius(float p_radius);
+	void set_emission_ring_axis(Vector3 p_axis);
 
 	EmissionShape get_emission_shape() const;
 	float get_emission_sphere_radius() const;
@@ -277,7 +284,10 @@ public:
 	PoolVector<Vector3> get_emission_points() const;
 	PoolVector<Vector3> get_emission_normals() const;
 	PoolVector<Color> get_emission_colors() const;
-	int get_emission_point_count() const;
+	float get_emission_ring_height() const;
+	float get_emission_ring_inner_radius() const;
+	float get_emission_ring_radius() const;
+	Vector3 get_emission_ring_axis() const;
 
 	void set_gravity(const Vector3 &p_gravity);
 	Vector3 get_gravity() const;

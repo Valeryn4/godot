@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -47,13 +47,12 @@
 #include <fcntl.h>
 #include <io.h>
 #include <stdio.h>
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 
 class OS_UWP : public OS {
-
 public:
 	struct KeyEvent {
-
 		enum MessageType {
 			KEY_EVENT_MESSAGE,
 			CHAR_EVENT_MESSAGE
@@ -63,6 +62,7 @@ public:
 		MessageType type;
 		bool pressed;
 		unsigned int scancode;
+		unsigned int physical_scancode;
 		unsigned int unicode;
 		bool echo;
 		CorePhysicalKeyStatus status;
@@ -120,11 +120,6 @@ private:
 	JoypadUWP ^ joypad;
 
 	Windows::System::Display::DisplayRequest ^ display_request;
-
-	void _post_dpad(DWORD p_dpad, int p_device, bool p_pressed);
-
-	void _drag_event(int idx, UINT uMsg, WPARAM wParam, LPARAM lParam);
-	void _touch_event(int idx, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
 	ref class ManagedType {
 	public:
@@ -205,7 +200,7 @@ public:
 	virtual void delay_usec(uint32_t p_usec) const;
 	virtual uint64_t get_ticks_usec() const;
 
-	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking = true, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL, bool read_stderr = false, Mutex *p_pipe_mutex = NULL);
+	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking = true, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL, bool read_stderr = false, Mutex *p_pipe_mutex = NULL, bool p_open_console = false);
 	virtual Error kill(const ProcessID &p_pid);
 
 	virtual bool has_environment(const String &p_var) const;

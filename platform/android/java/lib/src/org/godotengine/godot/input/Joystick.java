@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -41,12 +41,12 @@ import java.util.List;
 class Joystick {
 	int device_id;
 	String name;
-	List<Integer> axes = new ArrayList<Integer>();
+	List<Integer> axes = new ArrayList<>();
 	protected boolean hasAxisHat = false;
 	/*
 	 * Keep track of values so we can prevent flooding the engine with useless events.
 	 */
-	protected final SparseArray axesValues = new SparseArray<Float>(4);
+	protected final SparseArray<Float> axesValues = new SparseArray<>(4);
 	protected int hatX;
 	protected int hatY;
 }

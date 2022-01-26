@@ -66,14 +66,12 @@ def configure(env):
             env.Prepend(CCFLAGS=["-O2"])
         elif env["optimize"] == "size":  # optimize for size
             env.Prepend(CCFLAGS=["-Os"])
-        env.Prepend(CPPDEFINES=["DEBUG_ENABLED"])
 
         if env["debug_symbols"]:
             env.Prepend(CCFLAGS=["-g2"])
 
     elif env["target"] == "debug":
         env.Prepend(CCFLAGS=["-g3"])
-        env.Prepend(CPPDEFINES=["DEBUG_ENABLED"])
         env.Append(LINKFLAGS=["-rdynamic"])
 
     ## Architecture
@@ -81,6 +79,13 @@ def configure(env):
     is64 = sys.maxsize > 2 ** 32
     if env["bits"] == "default":
         env["bits"] = "64" if is64 else "32"
+
+    if env["arch"] == "" and platform.machine() == "riscv64":
+        env["arch"] = "rv64"
+
+    if env["arch"] == "rv64":
+        # G = General-purpose extensions, C = Compression extension (very common).
+        env.Append(CCFLAGS=["-march=rv64gc"])
 
     ## Compiler configuration
 
@@ -149,15 +154,17 @@ def configure(env):
         env.ParseConfig("pkg-config libpng16 --cflags --libs")
 
     if not env["builtin_bullet"]:
-        # We need at least version 2.89
+        # We need at least version 2.90
+        min_bullet_version = "2.90"
+
         import subprocess
 
         bullet_version = subprocess.check_output(["pkg-config", "bullet", "--modversion"]).strip()
-        if str(bullet_version) < "2.89":
+        if str(bullet_version) < min_bullet_version:
             # Abort as system bullet was requested but too old
             print(
                 "Bullet: System version {0} does not match minimal requirements ({1}). Aborting.".format(
-                    bullet_version, "2.89"
+                    bullet_version, min_bullet_version
                 )
             )
             sys.exit(255)
@@ -221,6 +228,13 @@ def configure(env):
     # 16-bit library shouldn't be required due to compiler optimisations
     if not env["builtin_pcre2"]:
         env.ParseConfig("pkg-config libpcre2-32 --cflags --libs")
+
+    # Embree is only compatible with x86_64. Yet another unreliable hack that will break
+    # cross-compilation, this will really need to be handle better. Thankfully only affects
+    # people who disable builtin_embree (likely distro packagers).
+    if env["tools"] and not env["builtin_embree"] and (is64 and platform.machine() == "x86_64"):
+        # No pkgconfig file so far, hardcode expected lib name.
+        env.Append(LIBS=["embree3"])
 
     ## Flags
 

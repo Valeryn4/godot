@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -29,6 +29,7 @@
 /*************************************************************************/
 
 #include "plugin_config_dialog.h"
+
 #include "core/io/config_file.h"
 #include "core/os/dir_access.h"
 #include "editor/editor_node.h"
@@ -37,7 +38,8 @@
 #include "editor/project_settings_editor.h"
 #include "scene/gui/grid_container.h"
 
-#ifdef GDSCRIPT_ENABLED
+#include "modules/modules_enabled.gen.h" // For gdscript.
+#ifdef MODULE_GDSCRIPT_ENABLED
 #include "modules/gdscript/gdscript.h"
 #endif
 
@@ -51,13 +53,13 @@ void PluginConfigDialog::_clear_fields() {
 }
 
 void PluginConfigDialog::_on_confirmed() {
-
 	String path = "res://addons/" + subfolder_edit->get_text();
 
 	if (!_edit_mode) {
 		DirAccess *d = DirAccess::create(DirAccess::ACCESS_RESOURCES);
-		if (!d || d->make_dir_recursive(path) != OK)
+		if (!d || d->make_dir_recursive(path) != OK) {
 			return;
+		}
 	}
 
 	Ref<ConfigFile> cf = memnew(ConfigFile);
@@ -78,7 +80,9 @@ void PluginConfigDialog::_on_confirmed() {
 		// TODO Use script templates. Right now, this code won't add the 'tool' annotation to other languages.
 		// TODO Better support script languages with named classes (has_named_classes).
 
-#ifdef GDSCRIPT_ENABLED
+		// FIXME: It's hacky to have hardcoded access to the GDScript module here.
+		// The editor code should not have to know what languages are enabled.
+#ifdef MODULE_GDSCRIPT_ENABLED
 		if (lang_name == GDScriptLanguage::get_singleton()->get_name()) {
 			// Hard-coded GDScript template to keep usability until we use script templates.
 			Ref<Script> gdscript = memnew(GDScript);
@@ -105,7 +109,7 @@ void PluginConfigDialog::_on_confirmed() {
 			script = ScriptServer::get_language(lang_idx)->get_template(class_name, "EditorPlugin");
 			script->set_path(script_path);
 			ResourceSaver::save(script_path, script);
-#ifdef GDSCRIPT_ENABLED
+#ifdef MODULE_GDSCRIPT_ENABLED
 		}
 #endif
 
@@ -209,6 +213,7 @@ PluginConfigDialog::PluginConfigDialog() {
 
 	desc_edit = memnew(TextEdit);
 	desc_edit->set_custom_minimum_size(Size2(400, 80) * EDSCALE);
+	desc_edit->set_wrap_enabled(true);
 	grid->add_child(desc_edit);
 
 	Label *author_lb = memnew(Label);
@@ -236,7 +241,7 @@ PluginConfigDialog::PluginConfigDialog() {
 	for (int i = 0; i < ScriptServer::get_language_count(); i++) {
 		ScriptLanguage *lang = ScriptServer::get_language(i);
 		script_option_edit->add_item(lang->get_name());
-#ifdef GDSCRIPT_ENABLED
+#ifdef MODULE_GDSCRIPT_ENABLED
 		if (lang == GDScriptLanguage::get_singleton()) {
 			default_lang = i;
 		}

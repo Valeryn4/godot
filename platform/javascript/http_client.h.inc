@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -34,7 +34,8 @@ Error make_request(Method p_method, const String &p_url, const Vector<String> &p
 static void _parse_headers(int p_len, const char **p_headers, void *p_ref);
 
 int js_id = 0;
-int read_limit = 4096;
+// 64 KiB by default (favors fast download speeds at the cost of memory usage).
+int read_limit = 65536;
 Status status = STATUS_DISCONNECTED;
 
 String host;

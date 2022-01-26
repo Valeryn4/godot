@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -32,7 +32,6 @@
 #define LOCAL_VECTOR_H
 
 #include "core/error_macros.h"
-#include "core/os/copymem.h"
 #include "core/os/memory.h"
 #include "core/sort_array.h"
 #include "core/vector.h"
@@ -170,7 +169,7 @@ public:
 			push_back(p_val);
 		} else {
 			resize(count + 1);
-			for (U i = count; i > p_pos; i--) {
+			for (U i = count - 1; i > p_pos; i--) {
 				data[i] = data[i - 1];
 			}
 			data[p_pos] = p_val;
@@ -178,7 +177,7 @@ public:
 	}
 
 	int64_t find(const T &p_val, U p_from = 0) const {
-		for (U i = 0; i < count; i++) {
+		for (U i = p_from; i < count; i++) {
 			if (data[i] == p_val) {
 				return int64_t(i);
 			}
@@ -198,7 +197,7 @@ public:
 	}
 
 	void sort() {
-		sort_custom<_DefaultComparator<T> >();
+		sort_custom<_DefaultComparator<T>>();
 	}
 
 	void ordered_insert(T p_val) {
@@ -215,7 +214,7 @@ public:
 		Vector<T> ret;
 		ret.resize(size());
 		T *w = ret.ptrw();
-		copymem(w, data, sizeof(T) * count);
+		memcpy(w, data, sizeof(T) * count);
 		return ret;
 	}
 
@@ -223,7 +222,7 @@ public:
 		Vector<uint8_t> ret;
 		ret.resize(count * sizeof(T));
 		uint8_t *w = ret.ptrw();
-		copymem(w, data, sizeof(T) * count);
+		memcpy(w, data, sizeof(T) * count);
 		return ret;
 	}
 

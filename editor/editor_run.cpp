@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -30,11 +30,13 @@
 
 #include "editor_run.h"
 
+#include "plugins/script_editor_plugin.h"
+#include "script_editor_debugger.h"
+
 #include "core/project_settings.h"
 #include "editor_settings.h"
 
 EditorRun::Status EditorRun::get_status() const {
-
 	return status;
 }
 
@@ -43,12 +45,9 @@ String EditorRun::get_running_scene() const {
 }
 
 Error EditorRun::run(const String &p_scene, const String &p_custom_args, const List<String> &p_breakpoints, const bool &p_skip_breakpoints) {
-
 	List<String> args;
 
 	String resource_path = ProjectSettings::get_singleton()->get_resource_path();
-	String remote_host = EditorSettings::get_singleton()->get("network/debug/remote_host");
-	int remote_port = (int)EditorSettings::get_singleton()->get("network/debug/remote_port");
 
 	if (resource_path != "") {
 		args.push_back("--path");
@@ -56,8 +55,15 @@ Error EditorRun::run(const String &p_scene, const String &p_custom_args, const L
 	}
 
 	args.push_back("--remote-debug");
-	args.push_back(remote_host + ":" + String::num(remote_port));
 
+	const String conn_string = ScriptEditor::get_singleton()->get_debugger()->get_connection_string();
+	if (!conn_string.empty()) {
+		args.push_back(ScriptEditor::get_singleton()->get_debugger()->get_connection_string());
+	} else { // Try anyway with default settings
+		const String remote_host = EditorSettings::get_singleton()->get("network/debug/remote_host");
+		const int remote_port = (int)EditorSettings::get_singleton()->get("network/debug/remote_port");
+		args.push_back(remote_host + ":" + String::num(remote_port));
+	}
 	args.push_back("--allow_focus_steal_pid");
 	args.push_back(itos(OS::get_singleton()->get_process_id()));
 
@@ -67,6 +73,10 @@ Error EditorRun::run(const String &p_scene, const String &p_custom_args, const L
 
 	if (debug_navigation) {
 		args.push_back("--debug-navigation");
+	}
+
+	if (debug_shader_fallbacks) {
+		args.push_back("--debug-shader-fallbacks");
 	}
 
 	int screen = EditorSettings::get_singleton()->get("run/window_placement/screen");
@@ -107,7 +117,6 @@ Error EditorRun::run(const String &p_scene, const String &p_custom_args, const L
 	test_size.x = ProjectSettings::get_singleton()->get("display/window/size/test_width");
 	test_size.y = ProjectSettings::get_singleton()->get("display/window/size/test_height");
 	if (test_size.x > 0 && test_size.y > 0) {
-
 		desired_size = test_size;
 	}
 
@@ -161,14 +170,13 @@ Error EditorRun::run(const String &p_scene, const String &p_custom_args, const L
 	}
 
 	if (p_breakpoints.size()) {
-
 		args.push_back("--breakpoints");
 		String bpoints;
 		for (const List<String>::Element *E = p_breakpoints.front(); E; E = E->next()) {
-
 			bpoints += E->get().replace(" ", "%20");
-			if (E->next())
+			if (E->next()) {
 				bpoints += ",";
+			}
 		}
 
 		args.push_back(bpoints);
@@ -182,18 +190,52 @@ Error EditorRun::run(const String &p_scene, const String &p_custom_args, const L
 		args.push_back(p_scene);
 	}
 
+	String exec = OS::get_singleton()->get_executable_path();
+
 	if (p_custom_args != "") {
-		Vector<String> cargs = p_custom_args.split(" ", false);
-		for (int i = 0; i < cargs.size(); i++) {
-			args.push_back(cargs[i].replace(" ", "%20"));
+		// Allow the user to specify a command to run, similar to Steam's launch options.
+		// In this case, Godot will no longer be run directly; it's up to the underlying command
+		// to run it. For instance, this can be used on Linux to force a running project
+		// to use Optimus using `prime-run` or similar.
+		// Example: `prime-run %command% --time-scale 0.5`
+		const int placeholder_pos = p_custom_args.find("%command%");
+
+		Vector<String> custom_args;
+
+		if (placeholder_pos != -1) {
+			// Prepend executable-specific custom arguments.
+			// If nothing is placed before `%command%`, behave as if no placeholder was specified.
+			Vector<String> exec_args = p_custom_args.substr(0, placeholder_pos).split(" ", false);
+			if (exec_args.size() >= 1) {
+				exec = exec_args[0];
+				exec_args.remove(0);
+
+				// Append the Godot executable name before we append executable arguments
+				// (since the order is reversed when using `push_front()`).
+				args.push_front(OS::get_singleton()->get_executable_path());
+			}
+
+			for (int i = exec_args.size() - 1; i >= 0; i--) {
+				// Iterate backwards as we're pushing items in the reverse order.
+				args.push_front(exec_args[i].replace(" ", "%20"));
+			}
+
+			// Append Godot-specific custom arguments.
+			custom_args = p_custom_args.substr(placeholder_pos + String("%command%").size()).split(" ", false);
+			for (int i = 0; i < custom_args.size(); i++) {
+				args.push_back(custom_args[i].replace(" ", "%20"));
+			}
+		} else {
+			// Append Godot-specific custom arguments.
+			custom_args = p_custom_args.split(" ", false);
+			for (int i = 0; i < custom_args.size(); i++) {
+				args.push_back(custom_args[i].replace(" ", "%20"));
+			}
 		}
 	}
 
-	String exec = OS::get_singleton()->get_executable_path();
-
 	printf("Running: %ls", exec.c_str());
 	for (List<String>::Element *E = args.front(); E; E = E->next()) {
-
 		printf(" %ls", E->get().c_str());
 	};
 	printf("\n");
@@ -211,9 +253,7 @@ Error EditorRun::run(const String &p_scene, const String &p_custom_args, const L
 }
 
 void EditorRun::stop() {
-
 	if (status != STATUS_STOP && pid != 0) {
-
 		OS::get_singleton()->kill(pid);
 	}
 
@@ -222,29 +262,33 @@ void EditorRun::stop() {
 }
 
 void EditorRun::set_debug_collisions(bool p_debug) {
-
 	debug_collisions = p_debug;
 }
 
 bool EditorRun::get_debug_collisions() const {
-
 	return debug_collisions;
 }
 
 void EditorRun::set_debug_navigation(bool p_debug) {
-
 	debug_navigation = p_debug;
 }
 
 bool EditorRun::get_debug_navigation() const {
-
 	return debug_navigation;
 }
 
-EditorRun::EditorRun() {
+void EditorRun::set_debug_shader_fallbacks(bool p_debug) {
+	debug_shader_fallbacks = p_debug;
+}
 
+bool EditorRun::get_debug_shader_fallbacks() const {
+	return debug_shader_fallbacks;
+}
+
+EditorRun::EditorRun() {
 	status = STATUS_STOP;
 	running_scene = "";
 	debug_collisions = false;
 	debug_navigation = false;
+	debug_shader_fallbacks = false;
 }

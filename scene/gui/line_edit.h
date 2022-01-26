@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -35,7 +35,6 @@
 #include "scene/gui/popup_menu.h"
 
 class LineEdit : public Control {
-
 	GDCLASS(LineEdit, Control);
 
 public:
@@ -96,7 +95,6 @@ private:
 	Ref<Texture> right_icon;
 
 	struct Selection {
-
 		int begin;
 		int end;
 		int cursor_start;
@@ -104,6 +102,7 @@ private:
 		bool creating;
 		bool doubleclick;
 		bool drag_attempt;
+		uint64_t last_dblclk = 0;
 	} selection;
 
 	struct TextOperation {
@@ -155,7 +154,6 @@ private:
 	void _toggle_draw_caret();
 
 	void clear_internal();
-	void changed_internal();
 
 	void _editor_settings_changed();
 
@@ -209,6 +207,8 @@ public:
 	void copy_text();
 	void cut_text();
 	void paste_text();
+	bool has_undo() const;
+	bool has_redo() const;
 	void undo();
 	void redo();
 

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -94,7 +94,6 @@ private:
 	void _queue_update();
 
 	union ConnectionKey {
-
 		struct {
 			uint64_t node : 32;
 			uint64_t port : 32;
@@ -199,10 +198,10 @@ public:
 	virtual PortType get_input_port_type(int p_port) const = 0;
 	virtual String get_input_port_name(int p_port) const = 0;
 
-	void set_input_port_default_value(int p_port, const Variant &p_value);
+	virtual void set_input_port_default_value(int p_port, const Variant &p_value);
 	Variant get_input_port_default_value(int p_port) const; // if NIL (default if node does not set anything) is returned, it means no default value is wanted if disconnected, thus no input var must be supplied (empty string will be supplied)
 	Array get_default_input_values() const;
-	void set_default_input_values(const Array &p_values);
+	virtual void set_default_input_values(const Array &p_values);
 
 	virtual int get_output_port_count() const = 0;
 	virtual PortType get_output_port_type(int p_port) const = 0;
@@ -222,6 +221,7 @@ public:
 	virtual bool is_generate_input_var(int p_port) const;
 
 	virtual bool is_code_generated() const;
+	virtual bool is_show_prop_names() const;
 
 	virtual Vector<StringName> get_editable_properties() const;
 
@@ -246,6 +246,7 @@ class VisualShaderNodeCustom : public VisualShaderNode {
 		int type;
 	};
 
+	bool is_initialized = false;
 	List<Port> input_ports;
 	List<Port> output_ports;
 
@@ -262,7 +263,12 @@ protected:
 	virtual PortType get_output_port_type(int p_port) const;
 	virtual String get_output_port_name(int p_port) const;
 
+	virtual void set_input_port_default_value(int p_port, const Variant &p_value);
+	virtual void set_default_input_values(const Array &p_values);
+
 protected:
+	void _set_input_port_default_value(int p_port, const Variant &p_value);
+
 	virtual String generate_code(Shader::Mode p_mode, VisualShader::Type p_type, int p_id, const String *p_input_vars, const String *p_output_vars, bool p_for_preview = false) const;
 	virtual String generate_global_per_node(Shader::Mode p_mode, VisualShader::Type p_type, int p_id) const;
 
@@ -271,6 +277,9 @@ protected:
 public:
 	VisualShaderNodeCustom();
 	void update_ports();
+
+	bool _is_initialized();
+	void _set_initialized(bool p_enabled);
 };
 
 /////
@@ -379,6 +388,8 @@ protected:
 public:
 	void set_global_code_generated(bool p_enabled);
 	bool is_global_code_generated() const;
+
+	virtual bool is_show_prop_names() const;
 
 	void set_uniform_name(const String &p_name);
 	String get_uniform_name() const;

@@ -29,7 +29,7 @@ def get_opts():
     from SCons.Variables import BoolVariable
 
     return [
-        ("initial_memory", "Initial WASM memory (in MiB)", 16),
+        ("initial_memory", "Initial WASM memory (in MiB)", 32),
         BoolVariable("use_assertions", "Use Emscripten runtime assertions", False),
         BoolVariable("use_thinlto", "Use ThinLTO", False),
         BoolVariable("use_ubsan", "Use Emscripten undefined behavior sanitizer (UBSAN)", False),
@@ -76,11 +76,9 @@ def configure(env):
             env.Append(LINKFLAGS=["-Os"])
 
         if env["target"] == "release_debug":
-            env.Append(CPPDEFINES=["DEBUG_ENABLED"])
             # Retain function names for backtraces at the cost of file size.
             env.Append(LINKFLAGS=["--profiling-funcs"])
     else:  # "debug"
-        env.Append(CPPDEFINES=["DEBUG_ENABLED"])
         env.Append(CCFLAGS=["-O1", "-g"])
         env.Append(LINKFLAGS=["-O1", "-g"])
         env["use_assertions"] = True
@@ -90,11 +88,11 @@ def configure(env):
 
     if env["tools"]:
         if not env["threads_enabled"]:
-            print("Threads must be enabled to build the editor. Please add the 'threads_enabled=yes' option")
-            sys.exit(255)
-        if env["initial_memory"] < 32:
-            print("Editor build requires at least 32MiB of initial memory. Forcing it.")
-            env["initial_memory"] = 32
+            print('Note: Forcing "threads_enabled=yes" as it is required for the web editor.')
+            env["threads_enabled"] = "yes"
+        if env["initial_memory"] < 64:
+            print('Note: Forcing "initial_memory=64" as it is required for the web editor.')
+            env["initial_memory"] = 64
     else:
         # Disable exceptions and rtti on non-tools (template) builds
         # These flags help keep the file size down.
@@ -126,7 +124,6 @@ def configure(env):
         env.Append(CCFLAGS=["-fsanitize=leak"])
         env.Append(LINKFLAGS=["-fsanitize=leak"])
     if env["use_safe_heap"]:
-        env.Append(CCFLAGS=["-s", "SAFE_HEAP=1"])
         env.Append(LINKFLAGS=["-s", "SAFE_HEAP=1"])
 
     # Closure compiler
@@ -172,7 +169,7 @@ def configure(env):
     # Program() output consists of multiple files, so specify suffixes manually at builder.
     env["PROGSUFFIX"] = ""
     env["LIBPREFIX"] = "lib"
-    env["LIBSUFFIX"] = ".bc"
+    env["LIBSUFFIX"] = ".a"
     env["LIBPREFIXES"] = ["$LIBPREFIX"]
     env["LIBSUFFIXES"] = ["$LIBSUFFIX"]
 
@@ -226,8 +223,8 @@ def configure(env):
     # Allow use to take control of swapping WebGL buffers.
     env.Append(LINKFLAGS=["-s", "OFFSCREEN_FRAMEBUFFER=1"])
 
-    # callMain for manual start.
-    env.Append(LINKFLAGS=["-s", "EXTRA_EXPORTED_RUNTIME_METHODS=['callMain','cwrap']"])
+    # callMain for manual start, cwrap for the mono version.
+    env.Append(LINKFLAGS=["-s", "EXPORTED_RUNTIME_METHODS=['callMain','cwrap']"])
 
     # Add code that allow exiting runtime.
     env.Append(LINKFLAGS=["-s", "EXIT_RUNTIME=1"])

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -39,14 +39,12 @@
 #include "scene/resources/texture.h"
 
 class EditorHistory {
-
 	enum {
 
 		HISTORY_MAX = 64
 	};
 
 	struct Obj {
-
 		REF ref;
 		ObjectID object;
 		String property;
@@ -54,7 +52,6 @@ class EditorHistory {
 	};
 
 	struct History {
-
 		Vector<Obj> path;
 		int level;
 	};
@@ -66,7 +63,6 @@ class EditorHistory {
 	//Vector<EditorPlugin*> editor_plugins;
 
 	struct PropertyData {
-
 		String name;
 		Variant value;
 	};
@@ -106,10 +102,8 @@ public:
 class EditorSelection;
 
 class EditorData {
-
 public:
 	struct CustomType {
-
 		String name;
 		Ref<Script> script;
 		Ref<Texture> icon;
@@ -132,16 +126,13 @@ private:
 	Vector<EditorPlugin *> editor_plugins;
 
 	struct PropertyData {
-
 		String name;
 		Variant value;
 	};
-	Map<String, Vector<CustomType> > custom_types;
+	Map<String, Vector<CustomType>> custom_types;
 
 	List<PropertyData> clipboard;
 	UndoRedo undo_redo;
-
-	void _cleanup_history();
 
 	Vector<EditedScene> edited_scene;
 	int current_edited_scene;
@@ -182,7 +173,7 @@ public:
 	void add_custom_type(const String &p_type, const String &p_inherits, const Ref<Script> &p_script, const Ref<Texture> &p_icon);
 	Variant instance_custom_type(const String &p_type, const String &p_inherits);
 	void remove_custom_type(const String &p_type);
-	const Map<String, Vector<CustomType> > &get_custom_types() const { return custom_types; }
+	const Map<String, Vector<CustomType>> &get_custom_types() const { return custom_types; }
 
 	int add_edited_scene(int p_at_pos);
 	void move_edited_scene_index(int p_idx, int p_to_idx);
@@ -193,7 +184,7 @@ public:
 	Node *get_edited_scene_root(int p_idx = -1);
 	int get_edited_scene_count() const;
 	Vector<EditedScene> get_edited_scenes() const;
-	String get_scene_title(int p_idx) const;
+	String get_scene_title(int p_idx, bool p_always_strip_extension = false) const;
 	String get_scene_path(int p_idx) const;
 	String get_scene_type(int p_idx) const;
 	void set_scene_path(int p_idx, const String &p_path);
@@ -237,7 +228,6 @@ public:
 };
 
 class EditorSelection : public Object {
-
 	GDCLASS(EditorSelection, Object);
 
 private:
@@ -267,8 +257,9 @@ public:
 
 	template <class T>
 	T *get_node_editor_data(Node *p_node) {
-		if (!selection.has(p_node))
-			return NULL;
+		if (!selection.has(p_node)) {
+			return nullptr;
+		}
 		return Object::cast_to<T>(selection[p_node]);
 	}
 

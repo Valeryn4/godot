@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -52,7 +52,9 @@
 #include <dwmapi.h>
 #include <fcntl.h>
 #include <io.h>
+#include <shellapi.h>
 #include <stdio.h>
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <windowsx.h>
 // WinTab API
@@ -285,7 +287,6 @@ class OS_Windows : public OS {
 #endif
 
 	struct KeyEvent {
-
 		bool alt, shift, control, meta;
 		UINT uMsg;
 		WPARAM wParam;
@@ -335,6 +336,7 @@ class OS_Windows : public OS {
 	Vector2 im_position;
 
 	MouseMode mouse_mode;
+	int restore_mouse_trails;
 	bool alt_mem;
 	bool gr_mem;
 	bool shift_mem;
@@ -348,7 +350,7 @@ class OS_Windows : public OS {
 
 	HCURSOR cursors[CURSOR_MAX] = { NULL };
 	CursorShape cursor_shape;
-	Map<CursorShape, Vector<Variant> > cursors_cache;
+	Map<CursorShape, Vector<Variant>> cursors_cache;
 
 	InputDefault *input;
 	JoypadWindows *joypad;
@@ -384,6 +386,9 @@ protected:
 	virtual void initialize_core();
 	virtual Error initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
 
+	virtual bool is_offscreen_gl_available() const;
+	virtual void set_offscreen_gl_current(bool p_current);
+
 	virtual void set_main_loop(MainLoop *p_main_loop);
 	virtual void delete_main_loop();
 
@@ -396,7 +401,6 @@ protected:
 	String _quote_command_line_argument(const String &p_text) const;
 
 	struct ProcessInfo {
-
 		STARTUPINFO si;
 		PROCESS_INFORMATION pi;
 	};
@@ -408,7 +412,6 @@ protected:
 	bool minimized;
 	bool borderless;
 	bool window_focused;
-	bool console_visible;
 	bool was_maximized;
 
 public:
@@ -463,8 +466,6 @@ public:
 	virtual void set_window_always_on_top(bool p_enabled);
 	virtual bool is_window_always_on_top() const;
 	virtual bool is_window_focused() const;
-	virtual void set_console_visible(bool p_enabled);
-	virtual bool is_console_visible() const;
 	virtual void request_attention();
 	virtual void *get_native_handle(int p_handle_type);
 
@@ -495,7 +496,7 @@ public:
 	virtual void delay_usec(uint32_t p_usec) const;
 	virtual uint64_t get_ticks_usec() const;
 
-	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking = true, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL, bool read_stderr = false, Mutex *p_pipe_mutex = NULL);
+	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking = true, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL, bool read_stderr = false, Mutex *p_pipe_mutex = NULL, bool p_open_console = false);
 	virtual Error kill(const ProcessID &p_pid);
 	virtual int get_process_id() const;
 
@@ -526,6 +527,7 @@ public:
 	virtual void keyboard_set_current_layout(int p_index);
 	virtual String keyboard_get_layout_language(int p_index) const;
 	virtual String keyboard_get_layout_name(int p_index) const;
+	virtual uint32_t keyboard_get_scancode_from_physical(uint32_t p_scancode) const;
 
 	virtual void enable_for_stealing_focus(ProcessID pid);
 	virtual void move_window_to_foreground();
@@ -535,7 +537,7 @@ public:
 	virtual String get_cache_path() const;
 	virtual String get_godot_dir_name() const;
 
-	virtual String get_system_dir(SystemDir p_dir) const;
+	virtual String get_system_dir(SystemDir p_dir, bool p_shared_storage = true) const;
 	virtual String get_user_data_dir() const;
 
 	virtual String get_unique_id() const;

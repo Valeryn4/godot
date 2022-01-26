@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -33,14 +33,12 @@ package org.godotengine.godot;
 import android.app.Activity;
 import android.hardware.SensorEvent;
 
-import javax.microedition.khronos.egl.EGLConfig;
 import javax.microedition.khronos.opengles.GL10;
 
 /**
  * Wrapper for native library
  */
 public class GodotLib {
-
 	public static GodotIO io;
 
 	static {
@@ -74,10 +72,9 @@ public class GodotLib {
 
 	/**
 	 * Invoked on the GL thread when the underlying Android surface is created or recreated.
-	 * @param p_32_bits
 	 * @see android.opengl.GLSurfaceView.Renderer#onSurfaceCreated(GL10, EGLConfig)
 	 */
-	public static native void newcontext(boolean p_32_bits);
+	public static native void newcontext();
 
 	/**
 	 * Forward {@link Activity#onBackPressed()} event from the main thread to the GL thread.
@@ -139,7 +136,7 @@ public class GodotLib {
 	/**
 	 * Forward regular key events from the main thread to the GL thread.
 	 */
-	public static native void key(int p_scancode, int p_unicode_char, boolean p_pressed);
+	public static native void key(int p_keycode, int p_scancode, int p_unicode_char, boolean p_pressed);
 
 	/**
 	 * Forward game device's key events from the main thread to the GL thread.
@@ -172,11 +169,6 @@ public class GodotLib {
 	 * @see androidx.fragment.app.Fragment#onPause()
 	 */
 	public static native void focusout();
-
-	/**
-	 * Invoked when the audio thread is started.
-	 */
-	public static native void audio();
 
 	/**
 	 * Used to access Godot global properties.

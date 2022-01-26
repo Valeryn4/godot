@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -60,7 +60,7 @@ static bool check_error(const png_image &image) {
 
 Error png_to_image(const uint8_t *p_source, size_t p_size, bool p_force_linear, Ref<Image> p_image) {
 	png_image png_img;
-	zeromem(&png_img, sizeof(png_img));
+	memset(&png_img, 0, sizeof(png_img));
 	png_img.version = PNG_IMAGE_VERSION;
 
 	// fetch image properties
@@ -114,26 +114,26 @@ Error png_to_image(const uint8_t *p_source, size_t p_size, bool p_force_linear, 
 	PoolVector<uint8_t>::Write writer = buffer.write();
 
 	// read image data to buffer and release libpng resources
-	success = png_image_finish_read(&png_img, NULL, writer.ptr(), stride, NULL);
+	success = png_image_finish_read(&png_img, nullptr, writer.ptr(), stride, nullptr);
 	ERR_FAIL_COND_V_MSG(check_error(png_img), ERR_FILE_CORRUPT, png_img.message);
 	ERR_FAIL_COND_V(!success, ERR_FILE_CORRUPT);
 
-	p_image->create(png_img.width, png_img.height, 0, dest_format, buffer);
+	p_image->create(png_img.width, png_img.height, false, dest_format, buffer);
 
 	return OK;
 }
 
 Error image_to_png(const Ref<Image> &p_image, PoolVector<uint8_t> &p_buffer) {
-
 	Ref<Image> source_image = p_image->duplicate();
 
-	if (source_image->is_compressed())
+	if (source_image->is_compressed()) {
 		source_image->decompress();
+	}
 
 	ERR_FAIL_COND_V(source_image->is_compressed(), FAILED);
 
 	png_image png_img;
-	zeromem(&png_img, sizeof(png_img));
+	memset(&png_img, 0, sizeof(png_img));
 	png_img.version = PNG_IMAGE_VERSION;
 	png_img.width = source_image->get_width();
 	png_img.height = source_image->get_height();
@@ -178,11 +178,10 @@ Error image_to_png(const Ref<Image> &p_image, PoolVector<uint8_t> &p_buffer) {
 
 		PoolVector<uint8_t>::Write writer = p_buffer.write();
 		success = png_image_write_to_memory(&png_img, &writer[buffer_offset],
-				&compressed_size, 0, reader.ptr(), 0, NULL);
+				&compressed_size, 0, reader.ptr(), 0, nullptr);
 		ERR_FAIL_COND_V_MSG(check_error(png_img), FAILED, png_img.message);
 	}
 	if (!success) {
-
 		// buffer was big enough, must be some other error
 		ERR_FAIL_COND_V(compressed_size <= png_size_estimate, FAILED);
 
@@ -192,7 +191,7 @@ Error image_to_png(const Ref<Image> &p_image, PoolVector<uint8_t> &p_buffer) {
 
 		PoolVector<uint8_t>::Write writer = p_buffer.write();
 		success = png_image_write_to_memory(&png_img, &writer[buffer_offset],
-				&compressed_size, 0, reader.ptr(), 0, NULL);
+				&compressed_size, 0, reader.ptr(), 0, nullptr);
 		ERR_FAIL_COND_V_MSG(check_error(png_img), FAILED, png_img.message);
 		ERR_FAIL_COND_V(!success, FAILED);
 	}

@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -50,7 +50,6 @@ class PopupMenu;
 class ConnectDialogBinds;
 
 class ConnectDialog : public ConfirmationDialog {
-
 	GDCLASS(ConnectDialog, ConfirmationDialog);
 
 	Label *connect_to_label;
@@ -110,12 +109,10 @@ public:
 // Custom Tree needed to use a RichTextLabel as tooltip control
 // when display signal documentation.
 class ConnectionsDockTree : public Tree {
-
 	virtual Control *make_custom_tooltip(const String &p_text) const;
 };
 
 class ConnectionsDock : public VBoxContainer {
-
 	GDCLASS(ConnectionsDock, VBoxContainer);
 
 	//Right-click Pop-up Menu Options.
@@ -142,7 +139,7 @@ class ConnectionsDock : public VBoxContainer {
 	UndoRedo *undo_redo;
 	LineEdit *search_box;
 
-	Map<StringName, Map<StringName, String> > descr_cache;
+	Map<StringName, Map<StringName, String>> descr_cache;
 
 	void _filter_changed(const String &p_text);
 
@@ -174,7 +171,7 @@ public:
 	void set_node(Node *p_node);
 	void update_tree();
 
-	ConnectionsDock(EditorNode *p_editor = NULL);
+	ConnectionsDock(EditorNode *p_editor = nullptr);
 	~ConnectionsDock();
 };
 

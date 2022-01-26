@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -63,10 +63,11 @@ public:
 
 	_FORCE_INLINE_ int randi_range(int from, int to) {
 		unsigned int ret = randbase.rand();
-		if (to < from)
+		if (to < from) {
 			return ret % (from - to + 1) + to;
-		else
+		} else {
 			return ret % (to - from + 1) + from;
+		}
 	}
 
 	RandomNumberGenerator();

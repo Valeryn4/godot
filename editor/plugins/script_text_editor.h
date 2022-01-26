@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -37,7 +37,6 @@
 #include "script_editor_plugin.h"
 
 class ConnectionInfoDialog : public AcceptDialog {
-
 	GDCLASS(ConnectionInfoDialog, AcceptDialog);
 
 	Label *method;
@@ -52,7 +51,6 @@ public:
 };
 
 class ScriptTextEditor : public ScriptEditorBase {
-
 	GDCLASS(ScriptTextEditor, ScriptEditorBase);
 
 	CodeTextEditor *code_editor;
@@ -93,6 +91,7 @@ class ScriptTextEditor : public ScriptEditorBase {
 	struct ColorsCache {
 		Color symbol_color;
 		Color keyword_color;
+		Color control_flow_keyword_color;
 		Color basetype_color;
 		Color type_color;
 		Color usertype_color;
@@ -120,7 +119,7 @@ class ScriptTextEditor : public ScriptEditorBase {
 		EDIT_INDENT_RIGHT,
 		EDIT_INDENT_LEFT,
 		EDIT_DELETE_LINE,
-		EDIT_CLONE_DOWN,
+		EDIT_DUPLICATE_SELECTION,
 		EDIT_PICK_COLOR,
 		EDIT_TO_UPPERCASE,
 		EDIT_TO_LOWERCASE,
@@ -136,6 +135,7 @@ class ScriptTextEditor : public ScriptEditorBase {
 		SEARCH_LOCATE_FUNCTION,
 		SEARCH_GOTO_LINE,
 		SEARCH_IN_FILES,
+		REPLACE_IN_FILES,
 		BOOKMARK_TOGGLE,
 		BOOKMARK_GOTO_NEXT,
 		BOOKMARK_GOTO_PREV,
@@ -177,6 +177,7 @@ protected:
 	void _make_context_menu(bool p_selection, bool p_color, bool p_foldable, bool p_open_docs, bool p_goto_definition, Vector2 p_pos);
 	void _text_edit_gui_input(const Ref<InputEvent> &ev);
 	void _color_changed(const Color &p_color);
+	void _prepare_edit_menu();
 
 	void _goto_line(int p_line) { goto_line(p_line); }
 	void _lookup_symbol(const String &p_symbol, int p_row, int p_column);

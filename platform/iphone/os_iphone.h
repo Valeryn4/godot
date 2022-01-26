@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -44,11 +44,7 @@
 #include "servers/visual/rasterizer.h"
 #include "servers/visual_server.h"
 
-extern void godot_ios_plugins_initialize();
-extern void godot_ios_plugins_deinitialize();
-
 class OSIPhone : public OS_Unix {
-
 private:
 	static HashMap<String, void *> dynamic_symbol_lookup_table;
 	friend void register_dynamic_symbol(char *name, void *address);
@@ -64,6 +60,8 @@ private:
 	MainLoop *main_loop;
 
 	VideoMode video_mode;
+
+	EAGLContext *offscreen_gl_context;
 
 	virtual int get_video_driver_count() const;
 	virtual const char *get_video_driver_name(int p_driver) const;
@@ -85,6 +83,7 @@ private:
 	void set_data_dir(String p_dir);
 
 	String data_dir;
+	String cache_dir;
 
 	InputDefault *input;
 
@@ -97,7 +96,7 @@ private:
 public:
 	static OSIPhone *get_singleton();
 
-	OSIPhone(String p_data_dir);
+	OSIPhone(String p_data_dir, String p_cache_dir);
 	~OSIPhone();
 
 	bool iterate();
@@ -113,9 +112,13 @@ public:
 	virtual String get_name() const;
 	virtual String get_model_name() const;
 
+	virtual void set_clipboard(const String &p_text);
+	virtual String get_clipboard() const;
+
 	Error shell_open(String p_uri);
 
 	String get_user_data_dir() const;
+	String get_cache_path() const;
 
 	String get_locale() const;
 
@@ -127,9 +130,12 @@ public:
 
 	virtual int get_screen_dpi(int p_screen = -1) const;
 
+	void pencil_press(int p_idx, int p_x, int p_y, bool p_pressed, bool p_doubleclick);
 	void touch_press(int p_idx, int p_x, int p_y, bool p_pressed, bool p_doubleclick);
+	void pencil_drag(int p_idx, int p_prev_x, int p_prev_y, int p_x, int p_y, float p_force);
 	void touch_drag(int p_idx, int p_prev_x, int p_prev_y, int p_x, int p_y);
 	void touches_cancelled(int p_idx);
+	void pencil_cancelled(int p_idx);
 	void key(uint32_t p_key, bool p_pressed);
 	void set_virtual_keyboard_height(int p_height);
 
@@ -143,7 +149,7 @@ public:
 	int get_unused_joy_id();
 	void joy_connection_changed(int p_idx, bool p_connected, String p_name);
 	void joy_button(int p_device, int p_button, bool p_pressed);
-	void joy_axis(int p_device, int p_axis, const InputDefault::JoyAxis &p_value);
+	void joy_axis(int p_device, int p_axis, float p_value);
 
 	virtual void set_mouse_show(bool p_show);
 	virtual void set_mouse_grab(bool p_grab);
@@ -157,6 +163,10 @@ public:
 	virtual VideoMode get_video_mode(int p_screen = 0) const;
 
 	virtual void get_fullscreen_mode_list(List<VideoMode> *p_list, int p_screen = 0) const;
+
+	void set_offscreen_gl_context(EAGLContext *p_context);
+	virtual bool is_offscreen_gl_available() const;
+	virtual void set_offscreen_gl_current(bool p_current);
 
 	virtual void set_keep_screen_on(bool p_enabled);
 

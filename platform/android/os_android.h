@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -31,13 +31,10 @@
 #ifndef OS_ANDROID_H
 #define OS_ANDROID_H
 
-#include "audio_driver_jandroid.h"
 #include "audio_driver_opensl.h"
-#include "core/os/input.h"
 #include "core/os/main_loop.h"
 #include "drivers/unix/os_unix.h"
 #include "main/input_default.h"
-//#include "power_android.h"
 #include "servers/audio_server.h"
 #include "servers/visual/rasterizer.h"
 
@@ -45,43 +42,16 @@ class GodotJavaWrapper;
 class GodotIOJavaWrapper;
 
 class OS_Android : public OS_Unix {
-public:
-	struct TouchPos {
-		int id;
-		Point2 pos;
-	};
-
-	enum {
-		JOY_EVENT_BUTTON = 0,
-		JOY_EVENT_AXIS = 1,
-		JOY_EVENT_HAT = 2
-	};
-
-	struct JoypadEvent {
-
-		int device;
-		int type;
-		int index;
-		bool pressed;
-		float value;
-		int hat;
-	};
-
-private:
-	Vector<TouchPos> touch;
-	Point2 hover_prev_pos; // needed to calculate the relative position on hover events
-	Point2 scroll_prev_pos; // needed to calculate the relative position on scroll events
-
 	bool use_gl2;
 	bool use_apk_expansion;
 
-	bool use_16bits_fbo;
+	bool secondary_gl_available = false;
 
 	VisualServer *visual_server;
 
 	mutable String data_dir_cache;
+	mutable String cache_dir_cache;
 
-	//AudioDriverAndroid audio_driver_android;
 	AudioDriverOpenSL audio_driver_android;
 
 	const char *gl_extensions;
@@ -97,20 +67,7 @@ private:
 
 	int video_driver_index;
 
-	bool alt_mem = false;
-	bool shift_mem = false;
-	bool control_mem = false;
-	bool meta_mem = false;
-
-	int buttons_state;
-
-	void _set_key_modifier_state(Ref<InputEventWithModifiers> ev) const;
-
-	static int _button_index_from_mask(int button_mask);
-
-	static int _android_button_mask_to_godot_button_mask(int android_button_mask);
-
-	void _wheel_button_click(int event_buttons_mask, const Ref<InputEventMouseButton> &ev, int wheel_button, float factor);
+	bool transparency_enabled = false;
 
 public:
 	// functions used by main to initialize/deinitialize the OS
@@ -132,7 +89,6 @@ public:
 
 	typedef int64_t ProcessID;
 
-	static OS *get_singleton();
 	GodotJavaWrapper *get_godot_java();
 	GodotIOJavaWrapper *get_godot_io_java();
 
@@ -166,7 +122,6 @@ public:
 
 	void main_loop_begin();
 	bool main_loop_iterate();
-	void main_loop_request_go_back();
 	void main_loop_end();
 	void main_loop_focusout();
 	void main_loop_focusin();
@@ -181,46 +136,40 @@ public:
 	void set_opengl_extensions(const char *p_gl_extensions);
 	void set_display_size(Size2 p_size);
 
-	void set_context_is_16_bits(bool p_is_16);
+	void set_offscreen_gl_available(bool p_available);
+	virtual bool is_offscreen_gl_available() const;
+	virtual void set_offscreen_gl_current(bool p_current);
 
 	virtual void set_screen_orientation(ScreenOrientation p_orientation);
 	virtual ScreenOrientation get_screen_orientation() const;
 
 	virtual Error shell_open(String p_uri);
 	virtual String get_user_data_dir() const;
+	virtual String get_data_path() const;
+	virtual String get_cache_path() const;
 	virtual String get_resource_dir() const;
 	virtual String get_locale() const;
 	virtual void set_clipboard(const String &p_text);
 	virtual String get_clipboard() const;
+	virtual bool has_clipboard() const;
 	virtual String get_model_name() const;
 	virtual int get_screen_dpi(int p_screen = 0) const;
 
+	virtual bool get_window_per_pixel_transparency_enabled() const { return transparency_enabled; }
+	virtual void set_window_per_pixel_transparency_enabled(bool p_enabled) { ERR_FAIL_MSG("Setting per-pixel transparency is not supported at runtime, please set it in project settings instead."); }
+
 	virtual String get_unique_id() const;
 
-	virtual String get_system_dir(SystemDir p_dir) const;
+	virtual String get_system_dir(SystemDir p_dir, bool p_shared_storage = true) const;
 
 	void process_accelerometer(const Vector3 &p_accelerometer);
 	void process_gravity(const Vector3 &p_gravity);
 	void process_magnetometer(const Vector3 &p_magnetometer);
 	void process_gyroscope(const Vector3 &p_gyroscope);
-	void process_touch(int p_event, int p_pointer, const Vector<TouchPos> &p_points);
-	void process_hover(int p_type, Point2 p_pos);
-	void process_mouse_event(int event_action, int event_android_buttons_mask, Point2 event_pos, float event_vertical_factor = 0, float event_horizontal_factor = 0);
-	void process_double_tap(int event_android_button_mask, Point2 p_pos);
-	void process_scroll(Point2 p_pos);
-	void process_joy_event(JoypadEvent p_event);
-	void process_key_event(int p_scancode, int p_unicode_char, bool p_pressed);
-	void process_event(Ref<InputEvent> p_event);
 	void init_video_mode(int p_video_width, int p_video_height);
-
-	virtual Error native_video_play(String p_path, float p_volume, String p_audio_track, String p_subtitle_track);
-	virtual bool native_video_is_playing() const;
-	virtual void native_video_pause();
-	virtual void native_video_stop();
 
 	virtual bool is_joy_known(int p_device);
 	virtual String get_joy_guid(int p_device) const;
-	void joy_connection_changed(int p_device, bool p_connected, String p_name);
 	void vibrate_handheld(int p_duration_ms);
 
 	virtual bool _check_internal_feature_support(const String &p_feature);

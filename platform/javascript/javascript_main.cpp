@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -65,6 +65,11 @@ void main_loop_callback() {
 
 	int target_fps = Engine::get_singleton()->get_target_fps();
 	if (target_fps > 0) {
+		if (current_ticks - target_ticks > 1000000) {
+			// When the window loses focus, we stop getting updates and accumulate delay.
+			// For this reason, if the difference is too big, we reset target ticks to the current ticks.
+			target_ticks = current_ticks;
+		}
 		target_ticks += (uint64_t)(1000000 / target_fps);
 	}
 	if (os->main_loop_iterate()) {

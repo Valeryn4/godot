@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -35,7 +35,7 @@
  * Fast single-threaded growable array for POD types.
  * For use in render drivers, not for general use.
  * TO BE REPLACED by local_vector.
-*/
+ */
 
 #include "core/os/memory.h"
 #include "core/vector.h"
@@ -63,7 +63,7 @@ public:
 	void free() {
 		if (_list) {
 			memdelete_arr(_list);
-			_list = 0;
+			_list = nullptr;
 		}
 		_size = 0;
 		_max_size = 0;
@@ -115,7 +115,7 @@ template <class T>
 class RasterizerArray {
 public:
 	RasterizerArray() {
-		_list = 0;
+		_list = nullptr;
 		_size = 0;
 		_max_size = 0;
 	}
@@ -127,7 +127,7 @@ public:
 	void free() {
 		if (_list) {
 			memdelete_arr(_list);
-			_list = 0;
+			_list = nullptr;
 		}
 		_size = 0;
 		_max_size = 0;
@@ -158,7 +158,7 @@ public:
 		if (_size < _max_size) {
 			return &_list[_size++];
 		}
-		return 0;
+		return nullptr;
 	}
 
 	// several items at a time
@@ -172,7 +172,7 @@ public:
 
 		// revert
 		_size = old_size;
-		return 0;
+		return nullptr;
 	}
 
 	int size() const { return _size; }
@@ -181,8 +181,9 @@ public:
 
 	bool copy_from(const RasterizerArray<T> &o) {
 		// no resizing done here, it should be done manually
-		if (o.size() > _max_size)
+		if (o.size() > _max_size) {
 			return false;
+		}
 
 		// pod types only please!
 		memcpy(_list, o.get_data(), o.size() * sizeof(T));
@@ -194,8 +195,9 @@ public:
 	// to ensure there is no data to copy
 	void grow() {
 		unsigned int new_max_size = _max_size * 2;
-		if (!new_max_size)
+		if (!new_max_size) {
 			new_max_size = 1;
+		}
 
 		T *new_list = memnew_arr(T, new_max_size);
 
@@ -250,8 +252,9 @@ public:
 private:
 	void grow() {
 		unsigned int new_max_size = _list.size() * 2;
-		if (!new_max_size)
+		if (!new_max_size) {
 			new_max_size = 1;
+		}
 		_list.resize(new_max_size);
 	}
 
@@ -281,7 +284,7 @@ public:
 	void free() {
 		if (_list) {
 			memdelete_arr(_list);
-			_list = 0;
+			_list = nullptr;
 		}
 		_size = 0;
 		_max_size = 0;

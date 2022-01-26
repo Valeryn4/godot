@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -78,7 +78,6 @@ typedef struct _xrr_monitor_info {
 #undef CursorShape
 
 class OS_X11 : public OS_Unix {
-
 	Atom wm_delete;
 	Atom xdnd_enter;
 	Atom xdnd_position;
@@ -172,6 +171,7 @@ class OS_X11 : public OS_Unix {
 	static void _poll_events_thread(void *ud);
 	bool _wait_for_events() const;
 	void _poll_events();
+	void _check_pending_events(LocalVector<XEvent> &r_events);
 
 	static Bool _predicate_all_events(Display *display, XEvent *event, XPointer arg);
 	static Bool _predicate_clipboard_selection(Display *display, XEvent *event, XPointer arg);
@@ -192,7 +192,7 @@ class OS_X11 : public OS_Unix {
 	Cursor cursors[CURSOR_MAX];
 	Cursor null_cursor;
 	CursorShape current_cursor;
-	Map<CursorShape, Vector<Variant> > cursors_cache;
+	Map<CursorShape, Vector<Variant>> cursors_cache;
 
 	InputDefault *input;
 
@@ -239,6 +239,9 @@ protected:
 	virtual Error initialize(const VideoMode &p_desired, int p_video_driver, int p_audio_driver);
 	virtual void finalize();
 
+	virtual bool is_offscreen_gl_available() const;
+	virtual void set_offscreen_gl_current(bool p_current);
+
 	virtual void set_main_loop(MainLoop *p_main_loop);
 
 	void _window_changed(XEvent *event);
@@ -279,7 +282,7 @@ public:
 	virtual String get_data_path() const;
 	virtual String get_cache_path() const;
 
-	virtual String get_system_dir(SystemDir p_dir) const;
+	virtual String get_system_dir(SystemDir p_dir, bool p_shared_storage = true) const;
 
 	virtual Error shell_open(String p_uri);
 
@@ -358,6 +361,7 @@ public:
 	virtual void keyboard_set_current_layout(int p_index);
 	virtual String keyboard_get_layout_language(int p_index) const;
 	virtual String keyboard_get_layout_name(int p_index) const;
+	virtual uint32_t keyboard_get_scancode_from_physical(uint32_t p_scancode) const;
 
 	void update_real_mouse_position();
 	OS_X11();

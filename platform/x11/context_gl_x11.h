@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -42,7 +42,6 @@
 struct ContextGL_X11_Private;
 
 class ContextGL_X11 {
-
 public:
 	enum ContextType {
 		OLDSTYLE,
@@ -69,6 +68,10 @@ public:
 	int get_window_width();
 	int get_window_height();
 	void *get_glx_context();
+
+	bool is_offscreen_available() const;
+	void make_offscreen_current();
+	void release_offscreen_current();
 
 	Error initialize();
 

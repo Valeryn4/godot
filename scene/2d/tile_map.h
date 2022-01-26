@@ -5,8 +5,8 @@
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -40,7 +40,6 @@
 class CollisionObject2D;
 
 class TileMap : public Node2D {
-
 	GDCLASS(TileMap, Node2D);
 
 public:
@@ -83,7 +82,6 @@ private:
 	bool show_collision = false;
 
 	union PosKey {
-
 		struct {
 			int16_t x;
 			int16_t y;
@@ -113,7 +111,6 @@ private:
 	};
 
 	union Cell {
-
 		struct {
 			int32_t id : 24;
 			bool flip_h : 1;
@@ -131,7 +128,6 @@ private:
 	List<PosKey> dirty_bitmask;
 
 	struct Quadrant {
-
 		Vector2 pos;
 		List<RID> canvas_items;
 		RID body;
@@ -140,7 +136,7 @@ private:
 		SelfList<Quadrant> dirty_list;
 
 		struct NavPoly {
-			int id;
+			RID region;
 			Transform2D xform;
 		};
 
@@ -267,7 +263,7 @@ public:
 	Vector2 get_cell_autotile_coord(int p_x, int p_y) const;
 
 	void _set_celld(const Vector2 &p_pos, const Dictionary &p_data);
-	void set_cellv(const Vector2 &p_pos, int p_tile, bool p_flip_x = false, bool p_flip_y = false, bool p_transpose = false);
+	void set_cellv(const Vector2 &p_pos, int p_tile, bool p_flip_x = false, bool p_flip_y = false, bool p_transpose = false, Vector2 p_autotile_coord = Vector2());
 	int get_cellv(const Vector2 &p_pos) const;
 
 	void make_bitmask_area_dirty(const Vector2 &p_pos);

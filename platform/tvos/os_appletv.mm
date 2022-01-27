@@ -240,7 +240,7 @@ void OSAppleTV::joy_button(int p_device, int p_button, bool p_pressed) {
 	input->joy_button(p_device, p_button, p_pressed);
 };
 
-void OSAppleTV::joy_axis(int p_device, int p_axis, const InputDefault::JoyAxis &p_value) {
+void OSAppleTV::joy_axis(int p_device, int p_axis, float p_value) {
 	input->joy_axis(p_device, p_axis, p_value);
 };
 

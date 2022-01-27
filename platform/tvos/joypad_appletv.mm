@@ -288,13 +288,11 @@ int JoypadAppleTV::joy_id_for_name(const String &p_name) {
 	OSAppleTV::get_singleton()->joy_button(joy_id, JOY_DPAD_RIGHT,
 			gamepad.dpad.right.isPressed);
 	
-	InputDefault::JoyAxis jx;
-	jx.min = -1;
 
-	jx.value = gamepad.dpad.xAxis.value;
-	OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_DPAD_X, jx);
-	jx.value = -gamepad.dpad.yAxis.value;
-	OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_DPAD_Y, jx);
+	float value = gamepad.dpad.xAxis.value;
+	OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_DPAD_X, value);
+	value = -gamepad.dpad.yAxis.value;
+	OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_DPAD_Y, value);
 
 }
 
@@ -344,24 +342,22 @@ int JoypadAppleTV::joy_id_for_name(const String &p_name) {
 				setControllerInputDpadHandler(gamepad.dpad);
 			};
 
-			InputDefault::JoyAxis jx;
-			jx.min = -1;
 			if (element == gamepad.leftThumbstick) {
-				jx.value = gamepad.leftThumbstick.xAxis.value;
-				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_LX, jx);
-				jx.value = -gamepad.leftThumbstick.yAxis.value;
-				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_LY, jx);
+				float value = gamepad.leftThumbstick.xAxis.value;
+				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_LX, value);
+				value = -gamepad.leftThumbstick.yAxis.value;
+				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_LY, value);
 			} else if (element == gamepad.rightThumbstick) {
-				jx.value = gamepad.rightThumbstick.xAxis.value;
-				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_RX, jx);
-				jx.value = -gamepad.rightThumbstick.yAxis.value;
-				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_RY, jx);
+				float value = gamepad.rightThumbstick.xAxis.value;
+				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_RX, value);
+				value = -gamepad.rightThumbstick.yAxis.value;
+				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_RY, value);
 			} else if (element == gamepad.leftTrigger) {
-				jx.value = gamepad.leftTrigger.value;
-				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_L2, jx);
+				float value = gamepad.leftTrigger.value;
+				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_L2, value);
 			} else if (element == gamepad.rightTrigger) {
-				jx.value = gamepad.rightTrigger.value;
-				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_R2, jx);
+				float value = gamepad.rightTrigger.value;
+				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_R2, value);
 			}
 		};
 	} else if (controller.microGamepad != nil) {

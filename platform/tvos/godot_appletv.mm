@@ -89,7 +89,7 @@ int appletv_main(int argc, char **argv, String data_dir, String cash_dir) {
 	char cwd[512];
 	getcwd(cwd, sizeof(cwd));
 	printf("cwd %s\n", cwd);
-	os = new OSAppleTV(data_dir);
+	os = new OSAppleTV(data_dir, cash_dir);
 
 	char *fargv[64];
 	for (int i = 0; i < argc; i++) {

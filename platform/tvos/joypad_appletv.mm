@@ -278,7 +278,7 @@ int JoypadAppleTV::joy_id_for_name(const String &p_name) {
 	};
 }
 
-- (void)setControllerInputDpadHandler:(GCControllerDirectionPad *)dpad {
+- (void)setControllerInputDpadHandler:(GCControllerDirectionPad *)dpad atJoyId:(int)joy_id {
 	OSAppleTV::get_singleton()->joy_button(joy_id, JOY_DPAD_UP,
 			gamepad.dpad.up.isPressed);
 	OSAppleTV::get_singleton()->joy_button(joy_id, JOY_DPAD_DOWN,
@@ -339,7 +339,7 @@ int JoypadAppleTV::joy_id_for_name(const String &p_name) {
 				OSAppleTV::get_singleton()->joy_button(joy_id, JOY_R2,
 						gamepad.rightTrigger.isPressed);
 			} else if (element == gamepad.dpad) {
-				setControllerInputDpadHandler(gamepad.dpad);
+				[setControllerInputDpadHandler:dpad atJoyId:joy_id];
 			};
 
 			if (element == gamepad.leftThumbstick) {
@@ -357,7 +357,7 @@ int JoypadAppleTV::joy_id_for_name(const String &p_name) {
 				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_L2, value);
 			} else if (element == gamepad.rightTrigger) {
 				float value = gamepad.rightTrigger.value;
-				OSAppleTV::get_singleton()->joy_axis(joy_id, JOY_ANALOG_R2, value);
+				[setControllerInputDpadHandler:dpad atJoyId:joy_id];
 			}
 		};
 	} else if (controller.microGamepad != nil) {
@@ -378,7 +378,7 @@ int JoypadAppleTV::joy_id_for_name(const String &p_name) {
 				OSAppleTV::get_singleton()->joy_button(joy_id, JOY_BUTTON_2,
 						gamepad.buttonX.isPressed);
 			} else if (element == gamepad.dpad) {
-				setControllerInputDpadHandler(gamepad.dpad);
+				[setControllerInputDpadHandler:dpad atJoyId:joy_id];
 			}
 		};
 	}

@@ -1125,7 +1125,7 @@ Error EditorExportPlatformTVOS::export_project(const Ref<EditorExportPreset> &p_
 				print_line("Creating " + dir_name);
 				Error dir_err = tmp_app_path->make_dir_recursive(dir_name);
 				if (dir_err) {
-					ERR_PRINTS("Can't create '" + dir_name + "'.");
+					ERR_PRINT("Can't create '" + dir_name + "'.");
 					unzClose(src_pkg_zip);
 					memdelete(tmp_app_path);
 					return ERR_CANT_CREATE;
@@ -1135,7 +1135,7 @@ Error EditorExportPlatformTVOS::export_project(const Ref<EditorExportPreset> &p_
 			/* write the file */
 			FileAccess *f = FileAccess::open(file, FileAccess::WRITE);
 			if (!f) {
-				ERR_PRINTS("Can't write '" + file + "'.");
+				ERR_PRINT("Can't write '" + file + "'.");
 				unzClose(src_pkg_zip);
 				memdelete(tmp_app_path);
 				return ERR_CANT_CREATE;
@@ -1159,7 +1159,7 @@ Error EditorExportPlatformTVOS::export_project(const Ref<EditorExportPreset> &p_
 	unzClose(src_pkg_zip);
 
 	if (!found_library) {
-		ERR_PRINTS("Requested template library '" + library_to_use + "' not found. It might be missing from your template archive.");
+		ERR_PRINT("Requested template library '" + library_to_use + "' not found. It might be missing from your template archive.");
 		memdelete(tmp_app_path);
 		return ERR_FILE_NOT_FOUND;
 	}
@@ -1173,7 +1173,7 @@ Error EditorExportPlatformTVOS::export_project(const Ref<EditorExportPreset> &p_
 			String dest_lib_file_path = dest_dir + static_lib_path.get_file();
 			Error lib_copy_err = tmp_app_path->copy(static_lib_path, dest_lib_file_path);
 			if (lib_copy_err != OK) {
-				ERR_PRINTS("Can't copy '" + static_lib_path + "'.");
+				ERR_PRINT("Can't copy '" + static_lib_path + "'.");
 				memdelete(tmp_app_path);
 				return lib_copy_err;
 			}
@@ -1186,7 +1186,7 @@ Error EditorExportPlatformTVOS::export_project(const Ref<EditorExportPreset> &p_
 	String project_file_name = dest_dir + binary_name + ".xcodeproj/project.pbxproj";
 	FileAccess *f = FileAccess::open(project_file_name, FileAccess::WRITE);
 	if (!f) {
-		ERR_PRINTS("Can't write '" + project_file_name + "'.");
+		ERR_PRINT("Can't write '" + project_file_name + "'.");
 		return ERR_CANT_CREATE;
 	};
 	f->store_buffer(project_file_data.ptr(), project_file_data.size());

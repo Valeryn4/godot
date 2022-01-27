@@ -142,8 +142,6 @@ void GDNativeExportPlugin::_export_file(const String &p_path, const String &p_ty
 		}
 	}
 
-	// Add symbols for staticaly linked libraries on iOS
-	if (p_features.has("iOS")) {
 	// Add symbols for staticaly linked libraries on tvOS/iOS
 	if (p_features.has("iOS") || p_features.has("tvOS")) {
 

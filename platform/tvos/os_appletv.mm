@@ -415,6 +415,10 @@ String OSAppleTV::get_user_data_dir() const {
 	return data_dir;
 }
 
+String OSAppleTV::get_cache_path() const {
+	return cache_dir;
+}
+
 String OSAppleTV::get_name() const {
 	return "tvOS";
 }
@@ -560,7 +564,7 @@ void add_tvos_init_callback(init_callback cb) {
 	}
 }
 
-OSAppleTV::OSAppleTV(String p_data_dir) {
+OSAppleTV::OSAppleTV(String p_data_dir, String p_cash_dir) {
 	for (int i = 0; i < tvos_init_callbacks_count; ++i) {
 		tvos_init_callbacks[i]();
 	}
@@ -575,6 +579,7 @@ OSAppleTV::OSAppleTV(String p_data_dir) {
 	// can't call set_data_dir from here, since it requires DirAccess
 	// which is initialized in initialize_core
 	data_dir = p_data_dir;
+	cache_dir = p_cash_dir;
 
 	Vector<Logger *> loggers;
 	loggers.push_back(memnew(SyslogLogger));

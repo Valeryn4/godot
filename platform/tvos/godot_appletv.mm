@@ -70,7 +70,7 @@ int add_cmdline(int p_argc, char **p_args) {
 	return p_argc;
 }
 
-int appletv_main(int argc, char **argv, String data_dir) {
+int appletv_main(int argc, char **argv, String data_dir, String cash_dir) {
 	size_t len = strlen(argv[0]);
 
 	while (len--) {

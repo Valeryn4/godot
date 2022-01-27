@@ -60,11 +60,15 @@ static ViewController *mainViewController = nil;
 	CGRect windowBounds = [[UIScreen mainScreen] bounds];
 	self.window = [[UIWindow alloc] initWithFrame:windowBounds];
 
-	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,
+	NSArray *paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory, //TODO CasheDir, Document access denied!
 			NSUserDomainMask, YES);
 	NSString *documentsDirectory = [paths objectAtIndex:0];
 
-	int err = appletv_main(gargc, gargv, String::utf8([documentsDirectory UTF8String]));
+	paths = NSSearchPathForDirectoriesInDomains(NSCachesDirectory,
+			NSUserDomainMask, YES);
+	NSString *cashDirectory = [paths objectAtIndex:0];
+
+	int err = appletv_main(gargc, gargv, String::utf8([documentsDirectory UTF8String]), String::utf8([cashDirectory UTF8String]));
 	if (err != 0) {
 		// bail, things did not go very well for us, should probably output a message on screen with our error code...
 		exit(0);

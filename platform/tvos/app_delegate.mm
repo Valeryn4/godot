@@ -44,7 +44,7 @@
 extern int gargc;
 extern char **gargv;
 
-extern int appletv_main(int, char **, String);
+extern int appletv_main(int, char **, String, String);
 extern void appletv_finish();
 
 @implementation AppDelegate

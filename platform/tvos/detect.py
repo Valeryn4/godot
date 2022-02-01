@@ -35,6 +35,7 @@ def get_opts():
         ("TVOSSDK", "Path to the tvOS SDK", ""),
         BoolVariable("simulator", "Build for simulator", False),
         ("tvos_triple", "Triple for tvOS toolchain", ""),
+        ("SDK_MIN", "Minimum version sdk", "10.0"),
     ]
 
 
@@ -105,13 +106,13 @@ def configure(env):
 
     if env["simulator"]:
         detect_darwin_sdk_path("tvossimulator", env)
-        env.Append(CCFLAGS=("-isysroot $TVOSSDK -mappletvsimulator-version-min=10.0").split())
-        env.Append(LINKFLAGS=["-mappletvsimulator-version-min=10.0"])
+        env.Append(CCFLAGS=("-isysroot $TVOSSDK -mappletvsimulator-version-min=$SDK_MIN").split())
+        env.Append(LINKFLAGS=["-mappletvsimulator-version-min=$SDK_MIN"])
         env["LIBSUFFIX"] = ".simulator" + env["LIBSUFFIX"]
     else:
         detect_darwin_sdk_path("tvos", env)
-        env.Append(CCFLAGS=("-isysroot $TVOSSDK -mappletvos-version-min=10.0").split())
-        env.Append(LINKFLAGS=["-mappletvos-version-min=10.0"])
+        env.Append(CCFLAGS=("-isysroot $TVOSSDK -mappletvos-version-min=$SDK_MIN").split())
+        env.Append(LINKFLAGS=["-mappletvos-version-min=$SDK_MIN"])
 
     if env["arch"] == "x86" or env["arch"] == "x86_64":
         env["ENV"]["MACOSX_DEPLOYMENT_TARGET"] = "10.9"

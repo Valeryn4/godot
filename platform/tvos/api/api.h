@@ -1,12 +1,12 @@
 /*************************************************************************/
-/*  platform_config.h                                                    */
+/*  api.h                                                                */
 /*************************************************************************/
 /*                       This file is part of:                           */
 /*                           GODOT ENGINE                                */
 /*                      https://godotengine.org                          */
 /*************************************************************************/
-/* Copyright (c) 2007-2021 Juan Linietsky, Ariel Manzur.                 */
-/* Copyright (c) 2014-2021 Godot Engine contributors (cf. AUTHORS.md).   */
+/* Copyright (c) 2007-2022 Juan Linietsky, Ariel Manzur.                 */
+/* Copyright (c) 2014-2022 Godot Engine contributors (cf. AUTHORS.md).   */
 /*                                                                       */
 /* Permission is hereby granted, free of charge, to any person obtaining */
 /* a copy of this software and associated documentation files (the       */
@@ -28,20 +28,15 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#include <alloca.h>
+#ifndef TVOS_API_H
+#define TVOS_API_H
 
-#define GLES2_INCLUDE_H <ES2/gl.h>
-#define GLES3_INCLUDE_H <ES3/gl.h>
+#if defined(TVOS_ENABLED)
+extern void godot_tvos_plugins_initialize();
+extern void godot_tvos_plugins_deinitialize();
+#endif
 
-#define PLATFORM_REFCOUNT
+void register_tvos_api();
+void unregister_tvos_api();
 
-#define PTHREAD_RENAME_SELF
-
-#define _weakify(var) __weak typeof(var) GDWeak_##var = var;
-#define _strongify(var)                                      \
-	_Pragma("clang diagnostic push")                         \
-			_Pragma("clang diagnostic ignored \"-Wshadow\"") \
-					__strong typeof(var) var = GDWeak_##var; \
-	_Pragma("clang diagnostic pop")
-
-
+#endif // TVOS_ENABLED

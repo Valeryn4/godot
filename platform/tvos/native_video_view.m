@@ -236,6 +236,8 @@
 - (void)unpauseVideo {
 	[self.avPlayer play];
 	self.isVideoCurrentlyPlaying = YES;
+	[self.avPlayer volume:1.0];
+	NSLog(@"AVPlayer status:%@", [self.avPlayer status]);
 }
 
 - (void)playerItemDidReachEnd:(NSNotification *)notification {

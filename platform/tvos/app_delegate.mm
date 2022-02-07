@@ -80,7 +80,7 @@ static ViewController *mainViewController = nil;
 	// it can properly initialize the OpenGL context
 
 	ViewController *viewController = [[ViewController alloc] init];
-	viewController.godotView.useCADisplayLink = bool(GLOBAL_DEF("display.iOS/use_cadisplaylink", true)) ? YES : NO;
+	viewController.godotView.useCADisplayLink = bool(GLOBAL_DEF("display.tvOS/use_cadisplaylink", true)) ? YES : NO;
 	viewController.godotView.renderingInterval = 1.0 / kRenderingFrequency;
 
 	self.window.rootViewController = viewController;
@@ -120,11 +120,23 @@ static ViewController *mainViewController = nil;
 // if you open the app list without switching to another app or open/close the
 // notification panel by swiping from the upper part of the screen.
 
+- (void)applicationDidEnterBackground:(UIApplication *)application {
+	print("*** applicationDidEnterBackground()\n");
+}
+
+- (void)applicationWillEnterForeground:(UIApplication *)application {
+	print("*** applicationWillEnterForeground()\n");
+}
+
 - (void)applicationWillResignActive:(UIApplication *)application {
 	OSAppleTV::get_singleton()->on_focus_out();
+	print("*** focus out\n");
+	print("*** applicationWillResignActive()\n");
 }
 
 - (void)applicationDidBecomeActive:(UIApplication *)application {
+	print("*** applicationDidBecomeActive()\n");
+	print("*** focus in\n");
 	OSAppleTV::get_singleton()->on_focus_in();
 }
 

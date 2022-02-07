@@ -33,11 +33,11 @@
 #if defined(TVOS_ENABLED)
 
 void register_tvos_api() {
-	godot_ios_plugins_initialize();
+	godot_tvos_plugins_initialize();
 }
 
 void unregister_tvos_api() {
-	godot_ios_plugins_deinitialize();
+	godot_tvos_plugins_deinitialize();
 }
 
 #else

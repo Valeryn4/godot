@@ -608,7 +608,7 @@ void OSAppleTV::on_focus_out() {
 		[AppDelegate.viewController.godotView stopRendering];
 		if (native_video_is_playing()) {
 			
-			print("  3- native video focus out");	
+			print_verbose("  3- native video focus out");	
 			native_video_focus_out();	
 		}
 

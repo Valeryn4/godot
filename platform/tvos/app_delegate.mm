@@ -121,22 +121,22 @@ static ViewController *mainViewController = nil;
 // notification panel by swiping from the upper part of the screen.
 
 - (void)applicationDidEnterBackground:(UIApplication *)application {
-	print("*** applicationDidEnterBackground()\n");
+	print_verbose("*** applicationDidEnterBackground()");
 }
 
 - (void)applicationWillEnterForeground:(UIApplication *)application {
-	print("*** applicationWillEnterForeground()\n");
+	print_verbose("*** applicationWillEnterForeground()");
 }
 
 - (void)applicationWillResignActive:(UIApplication *)application {
 	OSAppleTV::get_singleton()->on_focus_out();
-	print("*** focus out\n");
-	print("*** applicationWillResignActive()\n");
+	print_verbose("*** focus out");
+	print_verbose("*** applicationWillResignActive()");
 }
 
 - (void)applicationDidBecomeActive:(UIApplication *)application {
-	print("*** applicationDidBecomeActive()\n");
-	print("*** focus in\n");
+	print_verbose("*** applicationDidBecomeActive()");
+	print_verbose("*** focus in");
 	OSAppleTV::get_singleton()->on_focus_in();
 }
 

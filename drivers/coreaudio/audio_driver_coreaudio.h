@@ -58,6 +58,7 @@ class AudioDriverCoreAudio : public AudioDriver {
 	Vector<int32_t> samples_in;
 	Vector<int16_t> input_buf;
 
+
 #ifdef OSX_ENABLED
 	Array _get_device_list(bool capture = false);
 	void _set_device(const String &device, bool capture = false);

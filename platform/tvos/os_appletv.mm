@@ -597,45 +597,49 @@ OSAppleTV::~OSAppleTV() {
 
 void OSAppleTV::on_focus_out() {
 	if (is_focused) {
-		print("** focus out:\n")
+		print_verbose("** focus out:");
 		is_focused = false;
 		if (get_main_loop()) {
-			print("  1- pre send notification\n");
+			print_verbose("  1 - send notification");
 			get_main_loop()->notification(MainLoop::NOTIFICATION_WM_FOCUS_OUT);
-			print("  1- post send notification\n");
 		}
 
-		print("  2- pre stop rendering\n");
+		print_verbose("  2- stop rendering");
 		[AppDelegate.viewController.godotView stopRendering];
-		print("  2- post stop rendering\n");
 		if (native_video_is_playing()) {
 			
-			print("  3- pre native focus out\n");	
-			native_video_focus_out();
-			print("  3- post native focus out\n");	
+			print("  3- native video focus out");	
+			native_video_focus_out();	
 		}
 
-		print("  4- pre stop audio driver\n");
+		print_verbose("  4- stop audio driver");
 		audio_driver.stop();
-		print("  4- post stop audio driver\n");
+
+		print_verbose("** focus out finished");
 	}
 }
 
 void OSAppleTV::on_focus_in() {
 	if (!is_focused) {
+		print_verbose("** focus in:");
 		is_focused = true;
 
 		if (get_main_loop()) {
+			print_verbose("  1)- send notification");
 			get_main_loop()->notification(MainLoop::NOTIFICATION_WM_FOCUS_IN);
 		}
 
+		print_verbose("  2)- start rendering");
 		[AppDelegate.viewController.godotView startRendering];
 
 		if (native_video_is_playing()) {
+			print_verbose("  3)- resume native video");
 			native_video_unpause();
 		}
-
+	
+		print_verbose("  4)- start audio driver");
 		audio_driver.start();
+		print_verbose("** focus in finished");
 	}
 }
 

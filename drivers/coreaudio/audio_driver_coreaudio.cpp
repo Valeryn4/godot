@@ -249,6 +249,7 @@ void AudioDriverCoreAudio::start() {
 			ERR_PRINT("AudioOutputUnitStart failed, code: " + itos(result));
 		} else {
 			active = true;
+			print_verbose("AudioOutputUnitStart success, code: " + itos(result));
 		}
 	}
 };
@@ -260,6 +261,7 @@ void AudioDriverCoreAudio::stop() {
 			ERR_PRINT("AudioOutputUnitStop failed, code: " + itos(result));
 		} else {
 			active = false;
+			print_verbose("AudioOutputUnitStop success, code: " + itos(result));
 		}
 	}
 }

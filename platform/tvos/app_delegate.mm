@@ -137,11 +137,11 @@ static ViewController *mainViewController = nil;
 - (void)applicationDidBecomeActive:(UIApplication *)application {
 	print_verbose("*** applicationDidBecomeActive()");
 	print_verbose("*** focus in");
-	OSAppleTV::get_singleton()->on_focus_in();
+	//OSAppleTV::get_singleton()->on_focus_in();
 
 	// Delay execution of my block for 0.1 seconds.
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 0.1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-		OSAppleTV::get_singleton()->on_focus_out();
+		//OSAppleTV::get_singleton()->on_focus_out();
 		OSAppleTV::get_singleton()->on_focus_in();
 	});
 }

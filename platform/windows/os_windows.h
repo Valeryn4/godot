@@ -71,9 +71,12 @@
 #define DVC_ROTATION 18
 
 #define CXO_MESSAGES 0x0004
+#define PK_STATUS 0x0002
 #define PK_NORMAL_PRESSURE 0x0400
 #define PK_TANGENT_PRESSURE 0x0800
 #define PK_ORIENTATION 0x1000
+
+#define TPS_INVERT 0x0010 /* 1.1 */
 
 typedef struct tagLOGCONTEXTW {
 	WCHAR lcName[40];
@@ -126,6 +129,7 @@ typedef struct tagORIENTATION {
 } ORIENTATION;
 
 typedef struct tagPACKET {
+	int pkStatus;
 	int pkNormalPressure;
 	int pkTangentPressure;
 	ORIENTATION pkOrientation;
@@ -146,6 +150,14 @@ typedef DWORD POINTER_INPUT_TYPE;
 typedef UINT32 POINTER_FLAGS;
 typedef UINT32 PEN_FLAGS;
 typedef UINT32 PEN_MASK;
+
+#ifndef PEN_FLAG_INVERTED
+#define PEN_FLAG_INVERTED 0x00000002
+#endif
+
+#ifndef PEN_FLAG_ERASER
+#define PEN_FLAG_ERASER 0x00000004
+#endif
 
 #ifndef PEN_MASK_PRESSURE
 #define PEN_MASK_PRESSURE 0x00000001
@@ -272,11 +284,13 @@ class OS_Windows : public OS {
 	int min_pressure;
 	int max_pressure;
 	bool tilt_supported;
+	bool pen_inverted = false;
 	bool block_mm = false;
 
 	int last_pressure_update;
 	float last_pressure;
 	Vector2 last_tilt;
+	bool last_pen_inverted = false;
 
 	enum {
 		KEY_EVENT_BUFFER_SIZE = 512
@@ -317,6 +331,8 @@ class OS_Windows : public OS {
 	bool layered_window;
 
 	uint32_t move_timer_id;
+
+	Ref<Image> icon;
 
 	HCURSOR hCursor;
 
@@ -445,6 +461,7 @@ public:
 	virtual Point2 get_screen_position(int p_screen = -1) const;
 	virtual Size2 get_screen_size(int p_screen = -1) const;
 	virtual int get_screen_dpi(int p_screen = -1) const;
+	virtual float get_screen_refresh_rate(int p_screen = -1) const;
 
 	virtual Point2 get_window_position() const;
 	virtual void set_window_position(const Point2 &p_position);
@@ -481,6 +498,8 @@ public:
 
 	virtual MainLoop *get_main_loop() const;
 
+	virtual uint64_t get_embedded_pck_offset() const;
+
 	virtual String get_name() const;
 
 	virtual Date get_date(bool utc) const;
@@ -489,6 +508,7 @@ public:
 	virtual uint64_t get_unix_time() const;
 	virtual uint64_t get_system_time_secs() const;
 	virtual uint64_t get_system_time_msecs() const;
+	virtual double get_subsecond_unix_time() const;
 
 	virtual bool can_draw() const;
 	virtual Error set_cwd(const String &p_cwd);
@@ -499,6 +519,7 @@ public:
 	virtual Error execute(const String &p_path, const List<String> &p_arguments, bool p_blocking = true, ProcessID *r_child_id = NULL, String *r_pipe = NULL, int *r_exitcode = NULL, bool read_stderr = false, Mutex *p_pipe_mutex = NULL, bool p_open_console = false);
 	virtual Error kill(const ProcessID &p_pid);
 	virtual int get_process_id() const;
+	virtual bool is_process_running(const ProcessID &p_pid) const;
 
 	virtual bool has_environment(const String &p_var) const;
 	virtual String get_environment(const String &p_var) const;
@@ -520,6 +541,7 @@ public:
 	virtual String get_locale() const;
 
 	virtual int get_processor_count() const;
+	virtual String get_processor_name() const;
 
 	virtual LatinKeyboardVariant get_latin_keyboard_variant() const;
 	virtual int keyboard_get_layout_count() const;
@@ -581,4 +603,4 @@ public:
 	~OS_Windows();
 };
 
-#endif
+#endif // OS_WINDOWS_H

@@ -864,6 +864,8 @@ EditorResourcePicker::EditorResourcePicker() {
 	add_child(edit_menu);
 	edit_menu->connect("id_pressed", this, "_edit_menu_cbk");
 	edit_menu->connect("popup_hide", edit_button, "set_pressed", varray(false));
+
+	add_constant_override("separation", 0);
 }
 
 void EditorScriptPicker::set_create_options(Object *p_menu_node) {
@@ -873,7 +875,12 @@ void EditorScriptPicker::set_create_options(Object *p_menu_node) {
 	}
 
 	menu_node->add_icon_item(get_icon("ScriptCreate", "EditorIcons"), TTR("New Script"), OBJ_MENU_NEW_SCRIPT);
-	menu_node->add_icon_item(get_icon("ScriptExtend", "EditorIcons"), TTR("Extend Script"), OBJ_MENU_EXTEND_SCRIPT);
+	if (script_owner) {
+		Ref<Script> script = script_owner->get_script();
+		if (script.is_valid()) {
+			menu_node->add_icon_item(get_icon("ScriptExtend", "EditorIcons"), TTR("Extend Script"), OBJ_MENU_EXTEND_SCRIPT);
+		}
+	}
 	menu_node->add_separator();
 }
 

@@ -28,8 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef PHYSICS_BODY__H
-#define PHYSICS_BODY__H
+#ifndef PHYSICS_BODY_H
+#define PHYSICS_BODY_H
 
 #include "core/vset.h"
 #include "scene/3d/collision_object.h"
@@ -278,6 +278,7 @@ public:
 		Vector3 remainder;
 		Vector3 travel;
 		int local_shape;
+		real_t collision_safe_fraction;
 
 		real_t get_angle(const Vector3 &p_up_direction) const {
 			return Math::acos(normal.dot(p_up_direction));
@@ -663,4 +664,4 @@ private:
 
 VARIANT_ENUM_CAST(PhysicalBone::JointType);
 
-#endif // PHYSICS_BODY__H
+#endif // PHYSICS_BODY_H

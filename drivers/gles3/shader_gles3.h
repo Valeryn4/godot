@@ -132,8 +132,10 @@ public:
 	static bool parallel_compile_supported; // True if using natively supported asyncrhonous compilation
 
 	static bool async_hidden_forbidden;
-	static int *compiles_started_this_frame;
-	static int max_simultaneous_compiles;
+	static uint32_t *compiles_started_this_frame;
+	static uint32_t *max_frame_compiles_in_progress;
+	static uint32_t max_simultaneous_compiles;
+	static uint32_t active_compiles_count;
 #ifdef DEBUG_ENABLED
 	static bool log_active_async_compiles_count;
 #endif
@@ -142,8 +144,6 @@ public:
 	static void advance_async_shaders_compilation();
 
 private:
-	static int active_compiles_count;
-
 	union VersionKey {
 		static const uint32_t UBERSHADER_FLAG = ((uint32_t)1) << 31;
 		struct {
@@ -369,7 +369,7 @@ private:
 	}
 
 	bool _bind(bool p_binding_fallback);
-	bool _bind_ubershader();
+	bool _bind_ubershader(bool p_for_warmrup = false);
 
 protected:
 	_FORCE_INLINE_ int _get_uniform(int p_which) const;
@@ -397,6 +397,7 @@ public:
 	void set_custom_shader_code(uint32_t p_code_id, const String &p_vertex, const String &p_vertex_globals, const String &p_fragment, const String &p_light, const String &p_fragment_globals, const String &p_uniforms, const Vector<StringName> &p_texture_uniforms, const Vector<CharString> &p_custom_defines, AsyncMode p_async_mode);
 	void set_custom_shader(uint32_t p_code_id);
 	void free_custom_shader(uint32_t p_code_id);
+	bool is_custom_code_ready_for_render(uint32_t p_code_id);
 
 	uint32_t get_version() const { return new_conditional_version.version; }
 	_FORCE_INLINE_ bool is_version_valid() const { return version && version->compile_status == Version::COMPILE_STATUS_OK; }
@@ -442,4 +443,4 @@ void ShaderGLES3::_set_conditional(int p_which, bool p_value) {
 	}
 }
 
-#endif
+#endif // SHADER_GLES3_H

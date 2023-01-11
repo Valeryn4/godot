@@ -28,10 +28,10 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifdef IPHONE_ENABLED
-
 #ifndef OS_IPHONE_H
 #define OS_IPHONE_H
+
+#ifdef IPHONE_ENABLED
 
 #include "core/os/input.h"
 #include "drivers/coreaudio/audio_driver_coreaudio.h"
@@ -123,12 +123,14 @@ public:
 	String get_locale() const;
 
 	String get_unique_id() const;
+	virtual String get_processor_name() const;
 
 	virtual void vibrate_handheld(int p_duration_ms = 500);
 
 	virtual bool _check_internal_feature_support(const String &p_feature);
 
 	virtual int get_screen_dpi(int p_screen = -1) const;
+	virtual float get_screen_refresh_rate(int p_screen = -1) const;
 
 	void pencil_press(int p_idx, int p_x, int p_y, bool p_pressed, bool p_doubleclick);
 	void touch_press(int p_idx, int p_x, int p_y, bool p_pressed, bool p_doubleclick);
@@ -193,6 +195,6 @@ public:
 	void on_focus_in();
 };
 
-#endif // OS_IPHONE_H
+#endif // IPHONE_ENABLED
 
-#endif
+#endif // OS_IPHONE_H

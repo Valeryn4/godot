@@ -506,10 +506,10 @@ String CSharpLanguage::make_function(const String &, const String &, const PoolS
 String CSharpLanguage::_get_indentation() const {
 #ifdef TOOLS_ENABLED
 	if (Engine::get_singleton()->is_editor_hint()) {
-		bool use_space_indentation = EDITOR_DEF("text_editor/indent/type", 0);
+		bool use_space_indentation = EDITOR_GET("text_editor/indent/type");
 
 		if (use_space_indentation) {
-			int indent_size = EDITOR_DEF("text_editor/indent/size", 4);
+			int indent_size = EDITOR_GET("text_editor/indent/size");
 
 			String space_indent = "";
 			for (int i = 0; i < indent_size; i++) {
@@ -722,19 +722,24 @@ bool CSharpLanguage::is_assembly_reloading_needed() {
 	GDMonoAssembly *proj_assembly = gdmono->get_project_assembly();
 
 	String appname = ProjectSettings::get_singleton()->get("application/config/name");
-	String appname_safe = OS::get_singleton()->get_safe_dir_name(appname);
-	if (appname_safe.empty()) {
-		appname_safe = "UnnamedProject";
+	String assembly_name = ProjectSettings::get_singleton()->get_setting("mono/project/assembly_name");
+
+	if (assembly_name.empty()) {
+		String appname_safe = OS::get_singleton()->get_safe_dir_name(appname);
+		if (appname_safe.empty()) {
+			appname_safe = "UnnamedProject";
+		}
+		assembly_name = appname_safe;
 	}
 
-	appname_safe += ".dll";
+	assembly_name += ".dll";
 
 	if (proj_assembly) {
 		String proj_asm_path = proj_assembly->get_path();
 
 		if (!FileAccess::exists(proj_asm_path)) {
 			// Maybe it wasn't loaded from the default path, so check this as well
-			proj_asm_path = GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(appname_safe);
+			proj_asm_path = GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(assembly_name);
 			if (!FileAccess::exists(proj_asm_path))
 				return false; // No assembly to load
 		}
@@ -742,7 +747,7 @@ bool CSharpLanguage::is_assembly_reloading_needed() {
 		if (FileAccess::get_modified_time(proj_asm_path) <= proj_assembly->get_modified_time())
 			return false; // Already up to date
 	} else {
-		if (!FileAccess::exists(GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(appname_safe)))
+		if (!FileAccess::exists(GodotSharpDirs::get_res_temp_assemblies_dir().plus_file(assembly_name)))
 			return false; // No assembly to load
 	}
 
@@ -3032,6 +3037,8 @@ ScriptInstance *CSharpScript::instance_create(Object *p_this) {
 	CRASH_COND(!valid);
 #endif
 
+	GD_MONO_SCOPE_THREAD_ATTACH;
+
 	if (native) {
 		String native_name = NATIVE_GDMONOCLASS_NAME(native);
 		if (!ClassDB::is_parent_class(p_this->get_class_name(), native_name)) {
@@ -3041,8 +3048,6 @@ ScriptInstance *CSharpScript::instance_create(Object *p_this) {
 			ERR_FAIL_V_MSG(NULL, "Script inherits from native type '" + native_name + "', so it can't be instanced in object of type: '" + p_this->get_class() + "'.");
 		}
 	}
-
-	GD_MONO_SCOPE_THREAD_ATTACH;
 
 	Variant::CallError unchecked_error;
 	return _create_instance(NULL, 0, p_this, Object::cast_to<Reference>(p_this) != NULL, unchecked_error);

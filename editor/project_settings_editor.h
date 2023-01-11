@@ -28,8 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef PROJECT_SETTINGS_H
-#define PROJECT_SETTINGS_H
+#ifndef PROJECT_SETTINGS_EDITOR_H
+#define PROJECT_SETTINGS_EDITOR_H
 
 #include "core/undo_redo.h"
 #include "editor/editor_autoload_settings.h"
@@ -74,7 +74,7 @@ class ProjectSettingsEditor : public AcceptDialog {
 	HBoxContainer *add_prop_bar;
 	AcceptDialog *message;
 	LineEdit *property;
-	OptionButton *type;
+	OptionButton *type_box;
 	PopupMenu *popup_add;
 	ConfirmationDialog *press_a_key;
 	bool press_a_key_physical;
@@ -178,6 +178,8 @@ class ProjectSettingsEditor : public AcceptDialog {
 	void _editor_restart();
 	void _editor_restart_close();
 
+	void _update_theme();
+
 protected:
 	void _unhandled_input(const Ref<InputEvent> &p_event);
 	void _notification(int p_what);
@@ -203,4 +205,4 @@ public:
 	ProjectSettingsEditor(EditorData *p_data);
 };
 
-#endif // PROJECT_SETTINGS_H
+#endif // PROJECT_SETTINGS_EDITOR_H

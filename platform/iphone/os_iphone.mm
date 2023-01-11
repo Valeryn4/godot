@@ -54,6 +54,7 @@
 
 #import <UIKit/UIKit.h>
 #include <dlfcn.h>
+#include <sys/sysctl.h>
 #import <sys/utsname.h>
 
 extern int gl_view_base_fb; // from gl_view.mm
@@ -201,6 +202,8 @@ bool OSIPhone::iterate() {
 	if (!main_loop) {
 		return true;
 	}
+
+	input->flush_buffered_events();
 
 	return Main::iteration();
 };
@@ -564,6 +567,10 @@ int OSIPhone::get_screen_dpi(int p_screen) const {
 	}
 }
 
+float OSIPhone::get_screen_refresh_rate(int p_screen) const {
+	return [UIScreen mainScreen].maximumFramesPerSecond;
+}
+
 Rect2 OSIPhone::get_window_safe_area() const {
 	if (@available(iOS 11, *)) {
 		UIEdgeInsets insets = UIEdgeInsetsZero;
@@ -665,9 +672,22 @@ void OSIPhone::native_video_stop() {
 	}
 }
 
+String OSIPhone::get_processor_name() const {
+	char buffer[256];
+	size_t buffer_len = 256;
+	if (sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_len, NULL, 0) == 0) {
+		return String::utf8(buffer, buffer_len);
+	}
+	ERR_FAIL_V_MSG("", String("Couldn't get the CPU model name. Returning an empty string."));
+}
+
 void OSIPhone::vibrate_handheld(int p_duration_ms) {
-	// iOS does not support duration for vibration
-	AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+	if (ios->supports_haptic_engine()) {
+		ios->vibrate_haptic_engine((float)p_duration_ms / 1000.f);
+	} else {
+		// iOS <13 does not support duration for vibration
+		AudioServicesPlaySystemSound(kSystemSoundID_Vibrate);
+	}
 }
 
 bool OSIPhone::_check_internal_feature_support(const String &p_feature) {

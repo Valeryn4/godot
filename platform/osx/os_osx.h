@@ -74,6 +74,8 @@ public:
 	NSTimeInterval last_warp = 0;
 	bool ignore_warp = false;
 
+	bool last_pen_inverted = false;
+
 	Vector<KeyEvent> key_event_buffer;
 	int key_event_pos;
 
@@ -276,6 +278,7 @@ public:
 	virtual int get_screen_dpi(int p_screen = -1) const;
 	virtual float get_screen_scale(int p_screen = -1) const;
 	virtual float get_screen_max_scale() const;
+	virtual float get_screen_refresh_rate(int p_screen = -1) const;
 
 	virtual Point2 get_window_position() const;
 	virtual void set_window_position(const Point2 &p_position);
@@ -310,6 +313,7 @@ public:
 	virtual String get_ime_text() const;
 
 	virtual String get_unique_id() const;
+	virtual String get_processor_name() const;
 
 	virtual OS::PowerState get_power_state();
 	virtual int get_power_seconds_left();
@@ -341,4 +345,4 @@ private:
 	Point2 get_screens_origin() const;
 };
 
-#endif
+#endif // OS_OSX_H

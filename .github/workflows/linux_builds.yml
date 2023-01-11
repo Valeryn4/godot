@@ -3,7 +3,8 @@ on: [push, pull_request]
 
 # Global Settings
 env:
-  GODOT_BASE_BRANCH: 3.x
+  # Only used for the cache key. Increment version to force clean build.
+  GODOT_BASE_BRANCH: 3.5
   SCONSFLAGS: verbose=yes warnings=all werror=yes
 
 concurrency:
@@ -22,16 +23,16 @@ jobs:
             cache-name: linux-editor-mono
             target: release_debug
             tools: true
-            sconsflags: module_mono_enabled=yes mono_glue=no
+            sconsflags: module_mono_enabled=yes mono_static=yes mono_glue=no
             bin: "./bin/godot.x11.opt.tools.64.mono"
             build-mono: true
             artifact: true
 
-          - name: Editor and sanitizers (target=debug, tools=yes, use_asan=yes, use_ubsan=yes)
+          - name: Editor and sanitizers (target=debug, tools=yes, use_asan=yes, use_ubsan=yes, linker=gold)
             cache-name: linux-editor-sanitizers
             target: debug
             tools: true
-            sconsflags: use_asan=yes use_ubsan=yes
+            sconsflags: use_asan=yes use_ubsan=yes linker=gold
             test: true
             bin: "./bin/godot.x11.tools.64s"
             build-mono: false
@@ -42,12 +43,12 @@ jobs:
             cache-name: linux-template-mono
             target: release
             tools: false
-            sconsflags: module_mono_enabled=yes mono_glue=no debug_symbols=no
+            sconsflags: module_mono_enabled=yes mono_static=yes mono_glue=no debug_symbols=no
             build-mono: false
             artifact: true
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Linux dependencies
         shell: bash
@@ -129,6 +130,7 @@ jobs:
         if: ${{ matrix.artifact }}
         run: |
           strip bin/godot.*
+          chmod +x bin/godot.*
 
       - name: Upload artifact
         uses: ./.github/actions/upload-artifact

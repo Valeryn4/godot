@@ -36,11 +36,26 @@
 #include "dictionary_property_edit.h"
 #include "editor_feature_profile.h"
 #include "editor_node.h"
+#include "editor_property_name_processor.h"
 #include "editor_scale.h"
 #include "editor_settings.h"
 #include "multi_node_edit.h"
 #include "scene/property_utils.h"
 #include "scene/resources/packed_scene.h"
+
+static bool _property_path_matches(const String &p_property_path, const String &p_filter, EditorPropertyNameProcessor::Style p_style) {
+	if (p_property_path.findn(p_filter) != -1) {
+		return true;
+	}
+
+	const Vector<String> sections = p_property_path.split("/");
+	for (int i = 0; i < sections.size(); i++) {
+		if (p_filter.is_subsequence_ofi(EditorPropertyNameProcessor::get_singleton()->process_name(sections[i], p_style))) {
+			return true;
+		}
+	}
+	return false;
+}
 
 Size2 EditorProperty::get_minimum_size() const {
 	Size2 ms;
@@ -223,7 +238,7 @@ void EditorProperty::_notification(int p_what) {
 		}
 
 		int ofs = get_constant("font_offset");
-		int text_limit = text_size;
+		int text_limit = text_size - ofs;
 
 		if (checkable) {
 			Ref<Texture> checkbox;
@@ -241,8 +256,10 @@ void EditorProperty::_notification(int p_what) {
 			}
 			check_rect = Rect2(ofs, ((size.height - checkbox->get_height()) / 2), checkbox->get_width(), checkbox->get_height());
 			draw_texture(checkbox, check_rect.position, color2);
-			ofs += get_constant("hseparator", "Tree") + checkbox->get_width() + get_constant("hseparation", "CheckBox");
-			text_limit -= ofs;
+
+			int check_ofs = get_constant("hseparator", "Tree") + checkbox->get_width() + get_constant("hseparation", "CheckBox");
+			ofs += check_ofs;
+			text_limit -= check_ofs;
 		} else {
 			check_rect = Rect2();
 		}
@@ -250,7 +267,7 @@ void EditorProperty::_notification(int p_what) {
 		if (can_revert) {
 			Ref<Texture> reload_icon = get_icon("ReloadSmall", "EditorIcons");
 			text_limit -= reload_icon->get_width() + get_constant("hseparator", "Tree") * 2;
-			revert_rect = Rect2(text_limit + get_constant("hseparator", "Tree"), (size.height - reload_icon->get_height()) / 2, reload_icon->get_width(), reload_icon->get_height());
+			revert_rect = Rect2(ofs + text_limit, (size.height - reload_icon->get_height()) / 2, reload_icon->get_width(), reload_icon->get_height());
 
 			Color color2(1, 1, 1);
 			if (revert_hover) {
@@ -552,7 +569,7 @@ void EditorProperty::_gui_input(const Ref<InputEvent> &p_event) {
 }
 
 void EditorProperty::_unhandled_key_input(const Ref<InputEvent> &p_event) {
-	if (!selected) {
+	if (!selected || !is_visible_in_tree()) {
 		return;
 	}
 
@@ -748,7 +765,7 @@ void EditorProperty::_bind_methods() {
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "checked"), "set_checked", "is_checked");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "draw_red"), "set_draw_red", "is_draw_red");
 	ADD_PROPERTY(PropertyInfo(Variant::BOOL, "keying"), "set_keying", "is_keying");
-	ADD_SIGNAL(MethodInfo("property_changed", PropertyInfo(Variant::STRING, "property"), PropertyInfo(Variant::NIL, "value", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NIL_IS_VARIANT)));
+	ADD_SIGNAL(MethodInfo("property_changed", PropertyInfo(Variant::STRING, "property"), PropertyInfo(Variant::NIL, "value", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NIL_IS_VARIANT), PropertyInfo(Variant::STRING, "field"), PropertyInfo(Variant::BOOL, "changing")));
 	ADD_SIGNAL(MethodInfo("multiple_properties_changed", PropertyInfo(Variant::POOL_STRING_ARRAY, "properties"), PropertyInfo(Variant::ARRAY, "value")));
 	ADD_SIGNAL(MethodInfo("property_keyed", PropertyInfo(Variant::STRING, "property")));
 	ADD_SIGNAL(MethodInfo("property_keyed_with_value", PropertyInfo(Variant::STRING, "property"), PropertyInfo(Variant::NIL, "value", PROPERTY_HINT_NONE, "", PROPERTY_USAGE_NIL_IS_VARIANT)));
@@ -834,7 +851,7 @@ void EditorProperty::_menu_option(int p_option) {
 			emit_changed(property, EditorNode::get_singleton()->get_inspector()->get_property_clipboard());
 		} break;
 		case MENU_COPY_PROPERTY_PATH: {
-			OS::get_singleton()->set_clipboard(property);
+			OS::get_singleton()->set_clipboard(property_path);
 		} break;
 	}
 }
@@ -1324,6 +1341,7 @@ void EditorInspector::_parse_added_editors(VBoxContainer *current_vbox, Ref<Edit
 				if (F->get().properties.size() == 1) {
 					//since it's one, associate:
 					ep->property = F->get().properties[0];
+					ep->property_path = property_prefix + F->get().properties[0];
 					ep->property_usage = 0;
 				}
 
@@ -1430,8 +1448,7 @@ void EditorInspector::update_tree() {
 	String group_base;
 	VBoxContainer *category_vbox = nullptr;
 
-	List<PropertyInfo>
-			plist;
+	List<PropertyInfo> plist;
 	object->get_property_list(&plist, true);
 
 	HashMap<String, VBoxContainer *> item_path;
@@ -1545,30 +1562,28 @@ void EditorInspector::update_tree() {
 		}
 
 		String name = (basename.find("/") != -1) ? basename.right(basename.rfind("/") + 1) : basename;
-
-		if (capitalize_paths) {
-			int dot = name.find(".");
+		String name_override = name;
+		String feature_tag;
+		{
+			const int dot = name.find(".");
 			if (dot != -1) {
-				String ov = name.right(dot);
-				name = name.substr(0, dot);
-				name = name.capitalize();
-				name += ov;
-
-			} else {
-				name = name.capitalize();
+				name_override = name.substr(0, dot);
+				feature_tag = name.right(dot);
 			}
 		}
 
+		// Don't localize script variables.
+		EditorPropertyNameProcessor::Style name_style = property_name_style;
+		if ((p.usage & PROPERTY_USAGE_SCRIPT_VARIABLE) && name_style == EditorPropertyNameProcessor::STYLE_LOCALIZED) {
+			name_style = EditorPropertyNameProcessor::STYLE_CAPITALIZED;
+		}
+		name = EditorPropertyNameProcessor::get_singleton()->process_name(name_override, name_style) + feature_tag;
+
 		String path = basename.left(basename.rfind("/"));
 
-		if (use_filter && filter != "") {
-			String cat = path;
-
-			if (capitalize_paths) {
-				cat = cat.capitalize();
-			}
-
-			if (!filter.is_subsequence_ofi(cat) && !filter.is_subsequence_ofi(name) && property_prefix.to_lower().find(filter.to_lower()) == -1) {
+		if (use_filter && !filter.empty()) {
+			const String property_path = property_prefix + (path.empty() ? "" : path + "/") + name_override;
+			if (!_property_path_matches(property_path, filter, property_name_style)) {
 				continue;
 			}
 		}
@@ -1594,13 +1609,33 @@ void EditorInspector::update_tree() {
 					current_vbox->add_child(section);
 					sections.push_back(section);
 
-					if (capitalize_paths) {
-						path_name = path_name.capitalize();
+					String label;
+					String tooltip;
+
+					// Don't localize groups for script variables.
+					EditorPropertyNameProcessor::Style section_name_style = property_name_style;
+					if ((p.usage & PROPERTY_USAGE_SCRIPT_VARIABLE) && section_name_style == EditorPropertyNameProcessor::STYLE_LOCALIZED) {
+						section_name_style = EditorPropertyNameProcessor::STYLE_CAPITALIZED;
+					}
+
+					// Only process group label if this is not the group or subgroup.
+					if ((i == 0 && path_name == group)) {
+						if (section_name_style == EditorPropertyNameProcessor::STYLE_LOCALIZED) {
+							label = TTRGET(path_name);
+							tooltip = path_name;
+						} else {
+							label = path_name;
+							tooltip = TTRGET(path_name);
+						}
+					} else {
+						label = EditorPropertyNameProcessor::get_singleton()->process_name(path_name, section_name_style);
+						tooltip = EditorPropertyNameProcessor::get_singleton()->process_name(path_name, EditorPropertyNameProcessor::get_tooltip_style(section_name_style));
 					}
 
 					Color c = sscolor;
 					c.a /= level;
-					section->setup(acc_path, path_name, object, c, use_folding);
+					section->setup(acc_path, label, object, c, use_folding);
+					section->set_tooltip(tooltip);
 
 					VBoxContainer *vb = section->get_vbox();
 					item_path[acc_path] = vb;
@@ -1702,6 +1737,7 @@ void EditorInspector::update_tree() {
 						if (F->get().properties.size() == 1) {
 							//since it's one, associate:
 							ep->property = F->get().properties[0];
+							ep->property_path = property_prefix + F->get().properties[0];
 							ep->property_usage = p.usage;
 							//and set label?
 						}
@@ -1709,7 +1745,7 @@ void EditorInspector::update_tree() {
 						if (F->get().label != String()) {
 							ep->set_label(F->get().label);
 						} else {
-							//use existin one
+							//use existing one
 							ep->set_label(name);
 						}
 						for (int i = 0; i < F->get().properties.size(); i++) {
@@ -1841,11 +1877,15 @@ void EditorInspector::set_read_only(bool p_read_only) {
 	update_tree();
 }
 
-bool EditorInspector::is_capitalize_paths_enabled() const {
-	return capitalize_paths;
+EditorPropertyNameProcessor::Style EditorInspector::get_property_name_style() const {
+	return property_name_style;
 }
-void EditorInspector::set_enable_capitalize_paths(bool p_capitalize) {
-	capitalize_paths = p_capitalize;
+
+void EditorInspector::set_property_name_style(EditorPropertyNameProcessor::Style p_style) {
+	if (property_name_style == p_style) {
+		return;
+	}
+	property_name_style = p_style;
 	update_tree();
 }
 
@@ -2334,7 +2374,7 @@ EditorInspector::EditorInspector() {
 	show_categories = false;
 	hide_script = true;
 	use_doc_hints = false;
-	capitalize_paths = true;
+	property_name_style = EditorPropertyNameProcessor::STYLE_CAPITALIZED;
 	use_filter = false;
 	autoclear = false;
 	changing = 0;

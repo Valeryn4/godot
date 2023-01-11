@@ -663,7 +663,7 @@ ShaderLanguage::Token ShaderLanguage::_get_token() {
 						}
 						if (!str.is_valid_integer()) {
 							if (uint_suffix_found) {
-								return _make_token(TK_ERROR, "Invalid (usigned integer) numeric constant");
+								return _make_token(TK_ERROR, "Invalid (unsigned integer) numeric constant");
 							} else {
 								return _make_token(TK_ERROR, "Invalid (integer) numeric constant");
 							}
@@ -2893,14 +2893,14 @@ bool ShaderLanguage::_validate_varying_assign(ShaderNode::Varying &p_varying, St
 		case ShaderNode::Varying::STAGE_VERTEX_TO_FRAGMENT_LIGHT:
 		case ShaderNode::Varying::STAGE_VERTEX:
 			if (current_function == String("fragment")) {
-				*r_message = RTR("Varyings which assigned in 'vertex' function may not be reassigned in 'fragment' or 'light'.");
+				*r_message = RTR("Varyings which were assigned in 'vertex' function may not be reassigned in 'fragment' or 'light'.");
 				return false;
 			}
 			break;
 		case ShaderNode::Varying::STAGE_FRAGMENT_TO_LIGHT:
 		case ShaderNode::Varying::STAGE_FRAGMENT:
 			if (current_function == String("vertex")) {
-				*r_message = RTR("Varyings which assigned in 'fragment' function may not be reassigned in 'vertex' or 'light'.");
+				*r_message = RTR("Varyings which were assigned in 'fragment' function may not be reassigned in 'vertex' or 'light'.");
 				return false;
 			}
 			break;
@@ -3626,9 +3626,13 @@ ShaderLanguage::Node *ShaderLanguage::_parse_expression(BlockNode *p_block, cons
 						}
 					} else if (tk.type == TK_PERIOD) {
 						completion_class = TAG_ARRAY;
-						p_block->block_tag = SubClassTag::TAG_ARRAY;
+						if (p_block != nullptr) {
+							p_block->block_tag = SubClassTag::TAG_ARRAY;
+						}
 						call_expression = _parse_and_reduce_expression(p_block, p_builtin_types);
-						p_block->block_tag = SubClassTag::TAG_GLOBAL;
+						if (p_block != nullptr) {
+							p_block->block_tag = SubClassTag::TAG_GLOBAL;
+						}
 						if (!call_expression) {
 							return nullptr;
 						}

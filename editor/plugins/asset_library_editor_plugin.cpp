@@ -31,6 +31,7 @@
 #include "asset_library_editor_plugin.h"
 
 #include "core/io/json.h"
+#include "core/io/stream_peer_ssl.h"
 #include "core/version.h"
 #include "editor/editor_node.h"
 #include "editor/editor_scale.h"
@@ -40,8 +41,8 @@
 static inline void setup_http_request(HTTPRequest *request) {
 	request->set_use_threads(EDITOR_DEF("asset_library/use_threads", true));
 
-	const String proxy_host = EDITOR_DEF("network/http_proxy/host", "");
-	const int proxy_port = EDITOR_DEF("network/http_proxy/port", -1);
+	const String proxy_host = EDITOR_GET("network/http_proxy/host");
+	const int proxy_port = EDITOR_GET("network/http_proxy/port");
 	request->set_http_proxy(proxy_host, proxy_port);
 	request->set_https_proxy(proxy_host, proxy_port);
 }
@@ -291,12 +292,15 @@ EditorAssetLibraryItemDescription::EditorAssetLibraryItemDescription() {
 	hbox->add_child(previews_vbox);
 	previews_vbox->add_constant_override("separation", 15 * EDSCALE);
 	previews_vbox->set_v_size_flags(SIZE_EXPAND_FILL);
+	previews_vbox->set_h_size_flags(SIZE_EXPAND_FILL);
 
 	preview = memnew(TextureRect);
 	previews_vbox->add_child(preview);
 	preview->set_expand(true);
 	preview->set_stretch_mode(TextureRect::STRETCH_KEEP_ASPECT_CENTERED);
 	preview->set_custom_minimum_size(Size2(640 * EDSCALE, 345 * EDSCALE));
+	preview->set_v_size_flags(SIZE_EXPAND_FILL);
+	preview->set_h_size_flags(SIZE_EXPAND_FILL);
 
 	previews_bg = memnew(PanelContainer);
 	previews_vbox->add_child(previews_bg);
@@ -614,6 +618,10 @@ void EditorAssetLibrary::_notification(int p_what) {
 			filter->set_clear_button_enabled(true);
 		} break;
 
+		case NOTIFICATION_RESIZED: {
+			_update_asset_items_columns();
+		} break;
+
 		case EditorSettings::NOTIFICATION_EDITOR_SETTINGS_CHANGED: {
 			_update_repository_options();
 			setup_http_request(request);
@@ -891,6 +899,19 @@ void EditorAssetLibrary::_request_image(ObjectID p_for, String p_image_url, Imag
 }
 
 void EditorAssetLibrary::_repository_changed(int p_repository_id) {
+	library_error->hide();
+	library_info->set_text(TTR("Loading..."));
+	library_info->show();
+
+	asset_top_page->hide();
+	asset_bottom_page->hide();
+	asset_items->hide();
+
+	filter->set_editable(false);
+	sort->set_disabled(true);
+	categories->set_disabled(true);
+	support->set_disabled(true);
+
 	host = repository->get_item_metadata(p_repository_id);
 	if (templates_only) {
 		_api_request("configure", REQUESTING_CONFIG, "?type=project");
@@ -959,6 +980,10 @@ void EditorAssetLibrary::_filter_debounce_timer_timeout() {
 	_search();
 }
 
+void EditorAssetLibrary::_request_current_config() {
+	_repository_changed(repository->get_selected());
+}
+
 HBoxContainer *EditorAssetLibrary::_make_pages(int p_page, int p_page_count, int p_page_len, int p_total_items, int p_current_items) {
 	HBoxContainer *hbc = memnew(HBoxContainer);
 
@@ -980,7 +1005,7 @@ HBoxContainer *EditorAssetLibrary::_make_pages(int p_page, int p_page_count, int
 	hbc->add_constant_override("separation", 5 * EDSCALE);
 
 	Button *first = memnew(Button);
-	first->set_text(TTR("First"));
+	first->set_text(TTR("First", "Pagination"));
 	if (p_page != 0) {
 		first->connect("pressed", this, "_search", varray(0));
 	} else {
@@ -990,7 +1015,7 @@ HBoxContainer *EditorAssetLibrary::_make_pages(int p_page, int p_page_count, int
 	hbc->add_child(first);
 
 	Button *prev = memnew(Button);
-	prev->set_text(TTR("Previous"));
+	prev->set_text(TTR("Previous", "Pagination"));
 	if (p_page > 0) {
 		prev->connect("pressed", this, "_search", varray(p_page - 1));
 	} else {
@@ -1020,7 +1045,7 @@ HBoxContainer *EditorAssetLibrary::_make_pages(int p_page, int p_page_count, int
 	}
 
 	Button *next = memnew(Button);
-	next->set_text(TTR("Next"));
+	next->set_text(TTR("Next", "Pagination"));
 	if (p_page < p_page_count - 1) {
 		next->connect("pressed", this, "_search", varray(p_page + 1));
 	} else {
@@ -1031,7 +1056,7 @@ HBoxContainer *EditorAssetLibrary::_make_pages(int p_page, int p_page_count, int
 	hbc->add_child(next);
 
 	Button *last = memnew(Button);
-	last->set_text(TTR("Last"));
+	last->set_text(TTR("Last", "Pagination"));
 	if (p_page != p_page_count - 1) {
 		last->connect("pressed", this, "_search", varray(p_page_count - 1));
 	} else {
@@ -1100,6 +1125,10 @@ void EditorAssetLibrary::_http_request_completed(int p_status, int p_code, const
 	}
 
 	if (error_abort) {
+		if (requesting == REQUESTING_CONFIG) {
+			library_info->hide();
+			library_error->show();
+		}
 		error_hb->show();
 		return;
 	}
@@ -1136,16 +1165,15 @@ void EditorAssetLibrary::_http_request_completed(int p_status, int p_code, const
 				}
 			}
 
+			filter->set_editable(true);
+			sort->set_disabled(false);
+			categories->set_disabled(false);
+			support->set_disabled(false);
+
 			_search();
 		} break;
 		case REQUESTING_SEARCH: {
 			initial_loading = false;
-
-			// The loading text only needs to be displayed before the first page is loaded.
-			// Therefore, we don't need to show it again.
-			library_loading->hide();
-
-			library_error->hide();
 
 			if (asset_items) {
 				memdelete(asset_items);
@@ -1185,7 +1213,7 @@ void EditorAssetLibrary::_http_request_completed(int p_status, int p_code, const
 			library_vb->add_child(asset_top_page);
 
 			asset_items = memnew(GridContainer);
-			asset_items->set_columns(2);
+			_update_asset_items_columns();
 			asset_items->add_constant_override("hseparation", 10 * EDSCALE);
 			asset_items->add_constant_override("vseparation", 10 * EDSCALE);
 
@@ -1195,8 +1223,10 @@ void EditorAssetLibrary::_http_request_completed(int p_status, int p_code, const
 			library_vb->add_child(asset_bottom_page);
 
 			if (result.empty()) {
-				library_error->set_text(vformat(TTR("No results for \"%s\"."), filter->get_text()));
-				library_error->show();
+				library_info->set_text(vformat(TTR("No results for \"%s\"."), filter->get_text()));
+				library_info->show();
+			} else {
+				library_info->hide();
 			}
 
 			for (int i = 0; i < result.size(); i++) {
@@ -1315,6 +1345,15 @@ void EditorAssetLibrary::_install_external_asset(String p_zip_path, String p_tit
 	emit_signal("install_asset", p_zip_path, p_title);
 }
 
+void EditorAssetLibrary::_update_asset_items_columns() {
+	int new_columns = get_size().x / (450.0 * EDSCALE);
+	new_columns = MAX(1, new_columns);
+
+	if (new_columns != asset_items->get_columns()) {
+		asset_items->set_columns(new_columns);
+	}
+}
+
 void EditorAssetLibrary::disable_community_support() {
 	support->get_popup()->set_item_checked(SUPPORT_COMMUNITY, false);
 }
@@ -1328,6 +1367,7 @@ void EditorAssetLibrary::_bind_methods() {
 	ClassDB::bind_method("_search", &EditorAssetLibrary::_search, DEFVAL(0));
 	ClassDB::bind_method("_search_text_changed", &EditorAssetLibrary::_search_text_changed);
 	ClassDB::bind_method("_filter_debounce_timer_timeout", &EditorAssetLibrary::_filter_debounce_timer_timeout);
+	ClassDB::bind_method("_request_current_config", &EditorAssetLibrary::_request_current_config);
 	ClassDB::bind_method("_install_asset", &EditorAssetLibrary::_install_asset);
 	ClassDB::bind_method("_manage_plugins", &EditorAssetLibrary::_manage_plugins);
 	ClassDB::bind_method("_asset_open", &EditorAssetLibrary::_asset_open);
@@ -1403,8 +1443,8 @@ EditorAssetLibrary::EditorAssetLibrary(bool p_templates_only) {
 	search_hb2->add_child(sort);
 
 	sort->set_h_size_flags(SIZE_EXPAND_FILL);
+	sort->set_clip_text(true);
 	sort->connect("item_selected", this, "_rerun_search");
-
 	search_hb2->add_child(memnew(VSeparator));
 
 	search_hb2->add_child(memnew(Label(TTR("Category:") + " ")));
@@ -1412,6 +1452,7 @@ EditorAssetLibrary::EditorAssetLibrary(bool p_templates_only) {
 	categories->add_item(TTR("All"));
 	search_hb2->add_child(categories);
 	categories->set_h_size_flags(SIZE_EXPAND_FILL);
+	categories->set_clip_text(true);
 	categories->connect("item_selected", this, "_rerun_search");
 
 	search_hb2->add_child(memnew(VSeparator));
@@ -1425,6 +1466,7 @@ EditorAssetLibrary::EditorAssetLibrary(bool p_templates_only) {
 
 	search_hb2->add_child(repository);
 	repository->set_h_size_flags(SIZE_EXPAND_FILL);
+	repository->set_clip_text(true);
 
 	search_hb2->add_child(memnew(VSeparator));
 
@@ -1469,20 +1511,28 @@ EditorAssetLibrary::EditorAssetLibrary(bool p_templates_only) {
 
 	library_vb_border->add_child(library_vb);
 
-	library_loading = memnew(Label(TTR("Loading...")));
-	library_loading->set_align(Label::ALIGN_CENTER);
-	library_vb->add_child(library_loading);
+	library_info = memnew(Label);
+	library_info->set_align(Label::ALIGN_CENTER);
+	library_vb->add_child(library_info);
 
-	library_error = memnew(Label);
-	library_error->set_align(Label::ALIGN_CENTER);
+	library_error = memnew(VBoxContainer);
 	library_error->hide();
 	library_vb->add_child(library_error);
+
+	library_error_label = memnew(Label(TTR("Failed to get repository configuration.")));
+	library_error_label->set_align(Label::ALIGN_CENTER);
+	library_error->add_child(library_error_label);
+
+	library_error_retry = memnew(Button(TTR("Retry")));
+	library_error_retry->set_h_size_flags(SIZE_SHRINK_CENTER);
+	library_error_retry->connect("pressed", this, "_request_current_config");
+	library_error->add_child(library_error_retry);
 
 	asset_top_page = memnew(HBoxContainer);
 	library_vb->add_child(asset_top_page);
 
 	asset_items = memnew(GridContainer);
-	asset_items->set_columns(2);
+	_update_asset_items_columns();
 	asset_items->add_constant_override("hseparation", 10 * EDSCALE);
 	asset_items->add_constant_override("vseparation", 10 * EDSCALE);
 
@@ -1532,6 +1582,16 @@ EditorAssetLibrary::EditorAssetLibrary(bool p_templates_only) {
 }
 
 ///////
+
+bool AssetLibraryEditorPlugin::is_available() {
+#ifdef JAVASCRIPT_ENABLED
+	// Asset Library can't work on Web editor for now as most assets are sourced
+	// directly from GitHub which does not set CORS.
+	return false;
+#else
+	return StreamPeerSSL::is_available();
+#endif
+}
 
 void AssetLibraryEditorPlugin::make_visible(bool p_visible) {
 	if (p_visible) {

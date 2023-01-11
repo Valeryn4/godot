@@ -243,6 +243,7 @@ public:
 
 private:
 	int index;
+	bool _project_settings_change_pending;
 	ViewType view_type;
 	void _menu_option(int p_option);
 	void _set_auto_orthogonal();
@@ -284,6 +285,7 @@ private:
 
 	VBoxContainer *top_right_vbox;
 	ViewportRotationControl *rotation_control;
+	Gradient *frame_time_gradient;
 	Label *fps_label;
 
 	struct _RayResult {
@@ -326,6 +328,7 @@ private:
 	Vector<_RayResult> selection_results;
 	bool clicked_includes_current;
 	bool clicked_wants_append;
+	bool selection_in_progress = false;
 
 	PopupMenu *selection_menu;
 
@@ -458,6 +461,8 @@ private:
 	bool can_drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from) const;
 	void drop_data_fw(const Point2 &p_point, const Variant &p_data, Control *p_from);
 
+	void _project_settings_changed();
+
 protected:
 	void _notification(int p_what);
 	static void _bind_methods();
@@ -483,6 +488,7 @@ public:
 	Camera *get_camera() { return camera; } // return the default camera object.
 
 	SpatialEditorViewport(SpatialEditor *p_spatial_editor, EditorNode *p_editor, int p_index);
+	~SpatialEditorViewport();
 };
 
 class SpatialEditorSelectedItem : public Object {
@@ -706,11 +712,10 @@ private:
 	void _update_camera_override_button(bool p_game_running);
 	void _update_camera_override_viewport(Object *p_viewport);
 
-	HBoxContainer *hbc_menu;
 	// Used for secondary menu items which are displayed depending on the currently selected node
 	// (such as MeshInstance's "Mesh" menu).
-	PanelContainer *context_menu_container;
-	HBoxContainer *hbc_context_menu;
+	PanelContainer *context_menu_panel = nullptr;
+	HBoxContainer *context_menu_hbox = nullptr;
 
 	void _generate_selection_boxes();
 	UndoRedo *undo_redo;
@@ -911,4 +916,4 @@ public:
 	virtual ~EditorSpatialGizmoPlugin();
 };
 
-#endif
+#endif // SPATIAL_EDITOR_PLUGIN_H

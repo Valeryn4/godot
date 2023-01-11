@@ -33,7 +33,12 @@
 #include "servers/navigation_server.h"
 
 Vector<Vector3> Navigation::get_simple_path(const Vector3 &p_start, const Vector3 &p_end, bool p_optimize) const {
-	return NavigationServer::get_singleton()->map_get_path(map, p_start, p_end, p_optimize);
+	WARN_DEPRECATED_MSG("'Navigation' node and 'Navigation.get_simple_path()' are deprecated and will be removed in a future version. Use 'NavigationServer.map_get_path()' instead.");
+	return NavigationServer::get_singleton()->map_get_path(map, p_start, p_end, p_optimize, navigation_layers);
+}
+
+String Navigation::get_configuration_warning() const {
+	return TTR("'Navigation' node and 'Navigation.get_simple_path()' are deprecated and will be removed in a future version. Use 'NavigationServer.map_get_path()' instead.");
 }
 
 Vector3 Navigation::get_closest_point_to_segment(const Vector3 &p_from, const Vector3 &p_to, bool p_use_collision) const {
@@ -66,9 +71,22 @@ void Navigation::set_cell_size(float p_cell_size) {
 	NavigationServer::get_singleton()->map_set_cell_size(map, cell_size);
 }
 
+void Navigation::set_cell_height(float p_cell_height) {
+	cell_height = p_cell_height;
+	NavigationServer::get_singleton()->map_set_cell_height(map, cell_height);
+}
+
 void Navigation::set_edge_connection_margin(float p_edge_connection_margin) {
 	edge_connection_margin = p_edge_connection_margin;
 	NavigationServer::get_singleton()->map_set_edge_connection_margin(map, edge_connection_margin);
+}
+
+void Navigation::set_navigation_layers(uint32_t p_navigation_layers) {
+	navigation_layers = p_navigation_layers;
+}
+
+uint32_t Navigation::get_navigation_layers() const {
+	return navigation_layers;
 }
 
 void Navigation::_bind_methods() {
@@ -86,12 +104,22 @@ void Navigation::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("set_cell_size", "cell_size"), &Navigation::set_cell_size);
 	ClassDB::bind_method(D_METHOD("get_cell_size"), &Navigation::get_cell_size);
 
+	ClassDB::bind_method(D_METHOD("set_cell_height", "cell_height"), &Navigation::set_cell_height);
+	ClassDB::bind_method(D_METHOD("get_cell_height"), &Navigation::get_cell_height);
+
 	ClassDB::bind_method(D_METHOD("set_edge_connection_margin", "margin"), &Navigation::set_edge_connection_margin);
 	ClassDB::bind_method(D_METHOD("get_edge_connection_margin"), &Navigation::get_edge_connection_margin);
 
+	ClassDB::bind_method(D_METHOD("set_navigation_layers", "navigation_layers"), &Navigation::set_navigation_layers);
+	ClassDB::bind_method(D_METHOD("get_navigation_layers"), &Navigation::get_navigation_layers);
+
 	ADD_PROPERTY(PropertyInfo(Variant::VECTOR3, "up_vector"), "set_up_vector", "get_up_vector");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "cell_size"), "set_cell_size", "get_cell_size");
+	ADD_PROPERTY(PropertyInfo(Variant::REAL, "cell_height"), "set_cell_height", "get_cell_height");
 	ADD_PROPERTY(PropertyInfo(Variant::REAL, "edge_connection_margin"), "set_edge_connection_margin", "get_edge_connection_margin");
+	ADD_PROPERTY(PropertyInfo(Variant::INT, "navigation_layers", PROPERTY_HINT_LAYERS_3D_NAVIGATION), "set_navigation_layers", "get_navigation_layers");
+
+	ADD_SIGNAL(MethodInfo("map_changed", PropertyInfo(Variant::_RID, "map")));
 }
 
 void Navigation::_notification(int p_what) {
@@ -100,18 +128,21 @@ void Navigation::_notification(int p_what) {
 			NavigationServer::get_singleton()->map_set_active(map, true);
 		} break;
 		case NOTIFICATION_EXIT_TREE: {
-			NavigationServer::get_singleton()->map_set_active(map, false);
+			// FIXME 3.5 with this old navigation node only
+			// if the node gets deleted this exit causes annoying error prints in debug
+			// It tries to deactivate a map that itself has sent a free command to the server.
+			//NavigationServer::get_singleton()->map_set_active(map, false);
 		} break;
 	}
 }
 
 Navigation::Navigation() {
 	map = NavigationServer::get_singleton()->map_create();
-
-	set_cell_size(0.3);
-	set_edge_connection_margin(5.0); // Five meters, depends alot on the agents radius
-
-	up = Vector3(0, 1, 0);
+	NavigationServer::get_singleton()->map_set_active(map, true);
+	NavigationServer::get_singleton()->map_set_up(map, get_up_vector());
+	NavigationServer::get_singleton()->map_set_cell_size(map, get_cell_size());
+	NavigationServer::get_singleton()->map_set_cell_height(map, get_cell_height());
+	NavigationServer::get_singleton()->map_set_edge_connection_margin(map, get_edge_connection_margin());
 }
 
 Navigation::~Navigation() {

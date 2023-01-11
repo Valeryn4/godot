@@ -49,6 +49,8 @@ class VisualInstance : public CullInstance {
 protected:
 	void _update_visibility();
 	virtual void _refresh_portal_mode();
+	virtual void _physics_interpolated_changed();
+	void set_instance_use_identity_transform(bool p_enable);
 
 	void _notification(int p_what);
 	static void _bind_methods();
@@ -165,4 +167,4 @@ VARIANT_ENUM_CAST(GeometryInstance::Flags);
 VARIANT_ENUM_CAST(GeometryInstance::LightmapScale);
 VARIANT_ENUM_CAST(GeometryInstance::ShadowCastingSetting);
 
-#endif
+#endif // VISUAL_INSTANCE_H

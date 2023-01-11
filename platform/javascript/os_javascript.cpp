@@ -46,6 +46,7 @@
 #include <png.h>
 #include <stdlib.h>
 
+#include "api/javascript_singleton.h"
 #include "dom_keys.inc"
 #include "godot_js.h"
 
@@ -133,7 +134,6 @@ Size2 OS_JavaScript::get_window_size() const {
 }
 
 void OS_JavaScript::set_window_maximized(bool p_enabled) {
-	WARN_PRINT_ONCE("Maximizing windows is not supported for the HTML5 platform.");
 }
 
 bool OS_JavaScript::is_window_maximized() const {
@@ -325,7 +325,7 @@ static const char *godot2dom_cursor(OS::CursorShape p_shape) {
 	switch (p_shape) {
 		case OS::CURSOR_ARROW:
 		default:
-			return "auto";
+			return "default";
 		case OS::CURSOR_IBEAM:
 			return "text";
 		case OS::CURSOR_POINTING_HAND:
@@ -333,9 +333,9 @@ static const char *godot2dom_cursor(OS::CursorShape p_shape) {
 		case OS::CURSOR_CROSS:
 			return "crosshair";
 		case OS::CURSOR_WAIT:
-			return "progress";
-		case OS::CURSOR_BUSY:
 			return "wait";
+		case OS::CURSOR_BUSY:
+			return "progress";
 		case OS::CURSOR_DRAG:
 			return "grab";
 		case OS::CURSOR_CAN_DROP:
@@ -900,6 +900,10 @@ int OS_JavaScript::get_process_id() const {
 	ERR_FAIL_V_MSG(0, "OS::get_process_id() is not available on the HTML5 platform.");
 }
 
+bool OS_JavaScript::is_process_running(const ProcessID &p_pid) const {
+	return false;
+}
+
 int OS_JavaScript::get_processor_count() const {
 	return godot_js_os_hw_concurrency_get();
 }
@@ -988,6 +992,10 @@ bool OS_JavaScript::can_draw() const {
 	return true; // Always?
 }
 
+void OS_JavaScript::vibrate_handheld(int p_duration_ms) {
+	godot_js_input_vibrate_handheld(p_duration_ms);
+}
+
 String OS_JavaScript::get_user_data_dir() const {
 	return "/userfs";
 };
@@ -1035,6 +1043,19 @@ void OS_JavaScript::file_access_close_callback(const String &p_file, int p_flags
 	}
 }
 
+void OS_JavaScript::update_pwa_state_callback() {
+	if (OS_JavaScript::get_singleton()) {
+		OS_JavaScript::get_singleton()->pwa_is_waiting = true;
+	}
+	if (JavaScript::get_singleton()) {
+		JavaScript::get_singleton()->emit_signal("pwa_update_available");
+	}
+}
+
+Error OS_JavaScript::pwa_update() {
+	return godot_js_pwa_update() ? FAILED : OK;
+}
+
 bool OS_JavaScript::is_userfs_persistent() const {
 	return idb_available;
 }
@@ -1072,6 +1093,8 @@ OS_JavaScript::OS_JavaScript() {
 	idb_available = godot_js_os_fs_is_persistent() != 0;
 	idb_needs_sync = false;
 	idb_is_syncing = false;
+	pwa_is_waiting = false;
+	godot_js_pwa_cb(&OS_JavaScript::update_pwa_state_callback);
 
 	if (AudioDriverJavaScript::is_available()) {
 #ifdef NO_THREADS

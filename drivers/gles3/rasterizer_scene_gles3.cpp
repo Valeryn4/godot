@@ -1136,6 +1136,9 @@ bool RasterizerSceneGLES3::_setup_material(RasterizerStorageGLES3::Material *p_m
 
 	state.scene_shader.set_custom_shader(p_material->shader->custom_code_id);
 	bool rebind = state.scene_shader.bind();
+	if (!ShaderGLES3::get_active()) {
+		return false;
+	}
 
 	if (p_material->ubo_id) {
 		glBindBufferBase(GL_UNIFORM_BUFFER, 1, p_material->ubo_id);
@@ -1158,7 +1161,7 @@ bool RasterizerSceneGLES3::_setup_material(RasterizerStorageGLES3::Material *p_m
 
 		if (t) {
 			if (t->redraw_if_visible) { //must check before proxy because this is often used with proxies
-				VisualServerRaster::redraw_request();
+				VisualServerRaster::redraw_request(false);
 			}
 
 			t = t->get_ptr(); //resolve for proxies
@@ -1242,7 +1245,7 @@ bool RasterizerSceneGLES3::_setup_material(RasterizerStorageGLES3::Material *p_m
 		glBindTexture(target, tex);
 
 		if (t && storage->config.srgb_decode_supported) {
-			//if SRGB decode extension is present, simply switch the texture to whathever is needed
+			//if SRGB decode extension is present, simply switch the texture to whatever is needed
 			bool must_srgb = false;
 
 			if (t->srgb && (texture_hints[i] == ShaderLanguage::ShaderNode::Uniform::HINT_ALBEDO || texture_hints[i] == ShaderLanguage::ShaderNode::Uniform::HINT_BLACK_ALBEDO)) {
@@ -1297,8 +1300,6 @@ void RasterizerSceneGLES3::_setup_geometry(RenderList::Element *e, const Transfo
 			if (s->blend_shapes.size() && e->instance->blend_values.size()) {
 				//blend shapes, use transform feedback
 				storage->mesh_render_blend_shapes(s, e->instance->blend_values.read().ptr());
-				//disable octahedral compression as the result of blend shapes is always uncompressed cartesian coordinates
-				state.scene_shader.set_conditional(SceneShaderGLES3::ENABLE_OCTAHEDRAL_COMPRESSION, false);
 				//rebind shader
 				state.scene_shader.bind();
 #ifdef DEBUG_ENABLED
@@ -1522,6 +1523,10 @@ void RasterizerSceneGLES3::_render_geometry(RenderList::Element *e) {
 			if (amount == -1) {
 				amount = multi_mesh->size;
 			}
+
+			if (!amount) {
+				return;
+			}
 #ifdef DEBUG_ENABLED
 
 			if (state.debug_draw == VS::VIEWPORT_DEBUG_DRAW_WIREFRAME && s->array_wireframe_id) {
@@ -1568,7 +1573,7 @@ void RasterizerSceneGLES3::_render_geometry(RenderList::Element *e) {
 					RasterizerStorageGLES3::Texture *t = storage->texture_owner.get(c.texture);
 
 					if (t->redraw_if_visible) {
-						VisualServerRaster::redraw_request();
+						VisualServerRaster::redraw_request(false);
 					}
 					t = t->get_ptr(); //resolve for proxies
 
@@ -1848,7 +1853,17 @@ void RasterizerSceneGLES3::_setup_light(RenderList::Element *e, const Transform 
 		GIProbeInstance *gipi = gi_probe_instance_owner.getptr(ridp[0]);
 
 		float bias_scale = e->instance->baked_light ? 1 : 0;
-		glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 10);
+		// Normally, lightmapping uses the same texturing units than the GI probes; however, in the case of the ubershader
+		// that's not a good idea because some hardware/drivers (Android/Intel) may fail to render if a single texturing unit
+		// is used through multiple kinds of samplers in the same shader.
+		// Moreover, since we don't know at this point if we are going to consume these textures from the ubershader or
+		// a conditioned one, the fact that async compilation is enabled is enough for us to switch to the alternative
+		// arrangement of texturing units.
+		if (storage->config.async_compilation_enabled) {
+			glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 12);
+		} else {
+			glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 10);
+		}
 		glBindTexture(GL_TEXTURE_3D, gipi->tex_cache);
 		state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_XFORM1, gipi->transform_to_data * p_view_transform);
 		state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_BOUNDS1, gipi->bounds);
@@ -1860,7 +1875,11 @@ void RasterizerSceneGLES3::_setup_light(RenderList::Element *e, const Transform 
 		if (gi_probe_count > 1) {
 			GIProbeInstance *gipi2 = gi_probe_instance_owner.getptr(ridp[1]);
 
-			glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 11);
+			if (storage->config.async_compilation_enabled) {
+				glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 13);
+			} else {
+				glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 11);
+			}
 			glBindTexture(GL_TEXTURE_3D, gipi2->tex_cache);
 			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_XFORM2, gipi2->transform_to_data * p_view_transform);
 			state.scene_shader.set_uniform(SceneShaderGLES3::GI_PROBE_BOUNDS2, gipi2->bounds);
@@ -2090,7 +2109,7 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 							if (storage->frame.current_rt && storage->frame.current_rt->flags[RasterizerStorage::RENDER_TARGET_TRANSPARENT]) {
 								glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 							} else {
-								glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+								glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
 							}
 
 						} break;
@@ -2147,7 +2166,9 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 
 		state.scene_shader.set_conditional(SceneShaderGLES3::USE_PHYSICAL_LIGHT_ATTENUATION, storage->config.use_physical_light_attenuation);
 
-		bool octahedral_compression = e->instance->base_type != VS::INSTANCE_IMMEDIATE && ((RasterizerStorageGLES3::Surface *)e->geometry)->format & VisualServer::ArrayFormat::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION;
+		bool octahedral_compression = e->instance->base_type != VS::INSTANCE_IMMEDIATE &&
+				((RasterizerStorageGLES3::Surface *)e->geometry)->format & VisualServer::ArrayFormat::ARRAY_FLAG_USE_OCTAHEDRAL_COMPRESSION &&
+				!(((RasterizerStorageGLES3::Surface *)e->geometry)->blend_shapes.size() && e->instance->blend_values.size());
 		if (octahedral_compression != prev_octahedral_compression) {
 			state.scene_shader.set_conditional(SceneShaderGLES3::ENABLE_OCTAHEDRAL_COMPRESSION, octahedral_compression);
 			rebind = true;
@@ -2161,6 +2182,9 @@ void RasterizerSceneGLES3::_render_list(RenderList::Element **p_elements, int p_
 			if (rebind) {
 				storage->info.render.shader_rebind_count++;
 			}
+		}
+		if (!ShaderGLES3::get_active()) {
+			continue;
 		}
 
 		if (!(e->sort_key & SORT_KEY_UNSHADED_FLAG) && !p_directional_add && !p_shadow) {
@@ -2308,6 +2332,11 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 		if (has_blend_alpha || p_material->shader->spatial.uses_depth_texture || ((has_base_alpha || p_instance->cast_shadows == VS::SHADOW_CASTING_SETTING_OFF) && p_material->shader->spatial.depth_draw_mode != RasterizerStorageGLES3::Shader::Spatial::DEPTH_DRAW_ALPHA_PREPASS) || p_material->shader->spatial.depth_draw_mode == RasterizerStorageGLES3::Shader::Spatial::DEPTH_DRAW_NEVER || p_material->shader->spatial.no_depth_test) {
 			return; //bye
 		}
+		if (!p_shadow_pass && !p_material->shader->shader->is_custom_code_ready_for_render(p_material->shader->custom_code_id)) {
+			// The shader is not guaranteed to be able to render (i.e., a not yet ready async hidden one);
+			// skip depth rendering because otherwise we risk masking out pixels that won't get written to at the actual render pass
+			return;
+		}
 
 		if (!p_material->shader->spatial.uses_alpha_scissor && !p_material->shader->spatial.writes_modelview_or_projection && !p_material->shader->spatial.uses_vertex && !p_material->shader->spatial.uses_discard && p_material->shader->spatial.depth_draw_mode != RasterizerStorageGLES3::Shader::Spatial::DEPTH_DRAW_ALPHA_PREPASS) {
 			//shader does not use discard and does not write a vertex position, use generic material
@@ -2406,7 +2435,7 @@ void RasterizerSceneGLES3::_add_geometry_with_material(RasterizerStorageGLES3::G
 	}
 
 	if (p_material->shader->spatial.uses_time) {
-		VisualServerRaster::redraw_request();
+		VisualServerRaster::redraw_request(false);
 	}
 }
 
@@ -3571,7 +3600,7 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	}
 
-	if ((!env || storage->frame.current_rt->flags[RasterizerStorage::RENDER_TARGET_TRANSPARENT] || storage->frame.current_rt->width < 4 || storage->frame.current_rt->height < 4) && !storage->frame.current_rt->use_fxaa && !storage->frame.current_rt->use_debanding && storage->frame.current_rt->sharpen_intensity < 0.001) { //no post process on small render targets
+	if ((!env || storage->frame.current_rt->width < 4 || storage->frame.current_rt->height < 4) && !storage->frame.current_rt->use_fxaa && !storage->frame.current_rt->use_debanding && storage->frame.current_rt->sharpen_intensity < 0.001) { //no post process on small render targets
 		//no environment or transparent render, simply return and convert to SRGB
 		if (storage->frame.current_rt->external.fbo != 0) {
 			glBindFramebuffer(GL_FRAMEBUFFER, storage->frame.current_rt->external.fbo);
@@ -3720,7 +3749,8 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 		if (composite_from != storage->frame.current_rt->buffers.diffuse) {
 			glEnable(GL_BLEND);
 			glBlendEquation(GL_FUNC_ADD);
-			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			// Alpha was used by the horizontal pass, it should not carry over.
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
 
 		} else {
 			glActiveTexture(GL_TEXTURE2);
@@ -3978,6 +4008,7 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 		}
 	}
 
+	state.tonemap_shader.set_conditional(TonemapShaderGLES3::DISABLE_ALPHA, !storage->frame.current_rt->flags[RasterizerStorage::RENDER_TARGET_TRANSPARENT]);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES3::V_FLIP, storage->frame.current_rt->flags[RasterizerStorage::RENDER_TARGET_VFLIP]);
 	state.tonemap_shader.bind();
 
@@ -4041,6 +4072,7 @@ void RasterizerSceneGLES3::_post_process(Environment *env, const CameraMatrix &p
 	state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_BCS, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES3::USE_COLOR_CORRECTION, false);
 	state.tonemap_shader.set_conditional(TonemapShaderGLES3::V_FLIP, false);
+	state.tonemap_shader.set_conditional(TonemapShaderGLES3::DISABLE_ALPHA, false);
 }
 
 bool RasterizerSceneGLES3::_element_needs_directional_add(RenderList::Element *e) {
@@ -4086,6 +4118,13 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_LESS);
 		state.ubo_data.shadow_atlas_pixel_size[0] = 1.0 / shadow_atlas->size;
 		state.ubo_data.shadow_atlas_pixel_size[1] = 1.0 / shadow_atlas->size;
+	} else {
+		if (storage->config.async_compilation_enabled) {
+			// Avoid GL UB message id 131222 caused by shadow samplers not properly set up in the ubershader
+			glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 6);
+			glBindTexture(GL_TEXTURE_2D, storage->resources.depth_tex);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		}
 	}
 
 	if (reflection_atlas && reflection_atlas->size) {
@@ -4438,7 +4477,7 @@ void RasterizerSceneGLES3::render_scene(const Transform &p_cam_transform, const 
 		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_BLEND);
 	} else {
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ZERO, GL_ONE);
 		glDisable(GL_BLEND);
 	}
 
@@ -4840,6 +4879,13 @@ void RasterizerSceneGLES3::render_shadow(RID p_light, RID p_shadow_atlas, int p_
 	state.ubo_data.shadow_dual_paraboloid_render_side = dp_direction;
 	state.ubo_data.shadow_dual_paraboloid_render_zfar = zfar;
 	state.ubo_data.opaque_prepass_threshold = 0.1;
+
+	if (storage->config.async_compilation_enabled) {
+		// Avoid GL UB message id 131222 caused by shadow samplers not properly set up in the ubershader
+		glActiveTexture(GL_TEXTURE0 + storage->config.max_texture_image_units - 6);
+		glBindTexture(GL_TEXTURE_2D, storage->resources.depth_tex);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+	}
 
 	_setup_environment(nullptr, light_projection, light_transform);
 

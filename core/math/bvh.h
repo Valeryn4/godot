@@ -75,7 +75,7 @@ public:
 	// see the variable declarations for more info.
 	void params_set_node_expansion(real_t p_value) {
 		BVH_LOCKED_FUNCTION
-		if (p_value >= 0.0) {
+		if (p_value >= 0) {
 			tree._node_expansion = p_value;
 			tree._auto_node_expansion = false;
 		} else {
@@ -295,7 +295,7 @@ public:
 		tree.update();
 		_check_for_collisions();
 #ifdef BVH_INTEGRITY_CHECKS
-		tree.integrity_check_all();
+		tree._integrity_check_all();
 #endif
 	}
 
@@ -464,13 +464,6 @@ private:
 				if (ref_id == changed_item_ref_id) {
 					continue;
 				}
-
-#ifdef BVH_CHECKS
-				// if neither are pairable, they should ignore each other
-				// THIS SHOULD NEVER HAPPEN .. now we only test the pairable tree
-				// if the changed item is not pairable
-				CRASH_COND(params.test_pairable_only && !tree._extra[ref_id].pairable);
-#endif
 
 				// checkmasks is already done in the cull routine.
 				BVHHandle h_collidee;

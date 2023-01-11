@@ -176,7 +176,11 @@ class ThemeItemEditorDialog : public AcceptDialog {
 
 	TabContainer *tc;
 
-	ItemList *edit_type_list;
+	enum TypesTreeAction {
+		TYPES_TREE_REMOVE_ITEM,
+	};
+
+	Tree *edit_type_list;
 	LineEdit *edit_add_type_value;
 	String edited_item_type;
 
@@ -227,13 +231,15 @@ class ThemeItemEditorDialog : public AcceptDialog {
 
 	void _dialog_about_to_show();
 	void _update_edit_types();
-	void _edited_type_selected(int p_item_idx);
+	void _edited_type_selected();
+	void _edited_type_button_pressed(Object *p_item, int p_column, int p_id);
 
 	void _update_edit_item_tree(String p_item_type);
 	void _item_tree_button_pressed(Object *p_item, int p_column, int p_id);
 
 	void _add_theme_type(const String &p_new_text);
 	void _add_theme_item(Theme::DataType p_data_type, String p_item_name, String p_item_type);
+	void _remove_theme_type(const String &p_theme_type);
 	void _remove_data_type_items(Theme::DataType p_data_type, String p_item_type);
 	void _remove_class_items();
 	void _remove_custom_items();
@@ -321,6 +327,16 @@ class ThemeTypeEditor : public MarginContainer {
 	VBoxContainer *icon_items_list;
 	VBoxContainer *stylebox_items_list;
 
+	LineEdit *type_variation_edit;
+	Button *type_variation_button;
+	Label *type_variation_locked;
+
+	enum TypeDialogMode {
+		ADD_THEME_TYPE,
+		ADD_VARIATION_BASE,
+	};
+
+	TypeDialogMode add_type_mode = ADD_THEME_TYPE;
 	ThemeTypeDialog *add_type_dialog;
 
 	Vector<Control *> focusables;
@@ -356,6 +372,9 @@ class ThemeTypeEditor : public MarginContainer {
 	void _pin_leading_stylebox(Control *p_editor, String p_item_name);
 	void _unpin_leading_stylebox();
 	void _update_stylebox_from_leading();
+
+	void _type_variation_changed(const String p_value);
+	void _add_type_variation_cbk();
 
 	void _add_type_dialog_selected(const String p_type_name);
 

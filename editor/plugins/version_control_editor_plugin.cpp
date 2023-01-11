@@ -32,6 +32,7 @@
 
 #include "core/bind/core_bind.h"
 #include "core/os/keyboard.h"
+#include "core/os/time.h"
 #include "core/script_language.h"
 #include "editor/editor_file_system.h"
 #include "editor/editor_node.h"
@@ -58,6 +59,7 @@ void VersionControlEditorPlugin::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("_update_commit_button"), &VersionControlEditorPlugin::_update_commit_button);
 	ClassDB::bind_method(D_METHOD("_refresh_branch_list"), &VersionControlEditorPlugin::_refresh_branch_list);
 	ClassDB::bind_method(D_METHOD("_refresh_commit_list"), &VersionControlEditorPlugin::_refresh_commit_list);
+	ClassDB::bind_method(D_METHOD("_set_commit_list_size"), &VersionControlEditorPlugin::_set_commit_list_size);
 	ClassDB::bind_method(D_METHOD("_refresh_remote_list"), &VersionControlEditorPlugin::_refresh_remote_list);
 	ClassDB::bind_method(D_METHOD("_ssh_public_key_selected"), &VersionControlEditorPlugin::_ssh_public_key_selected);
 	ClassDB::bind_method(D_METHOD("_ssh_private_key_selected"), &VersionControlEditorPlugin::_ssh_private_key_selected);
@@ -83,8 +85,8 @@ void VersionControlEditorPlugin::_bind_methods() {
 
 void VersionControlEditorPlugin::_notification(int p_what) {
 	if (p_what == NOTIFICATION_READY) {
-		String installed_plugin = GLOBAL_GET("editor/version_control/plugin_name");
-		bool has_autoload_enable = GLOBAL_GET("editor/version_control/autoload_on_startup");
+		String installed_plugin = GLOBAL_GET("editor/version_control_plugin_name");
+		bool has_autoload_enable = GLOBAL_GET("editor/version_control_autoload_on_startup");
 
 		if (installed_plugin != "" && has_autoload_enable) {
 			if (_load_plugin(installed_plugin)) {
@@ -138,8 +140,8 @@ void VersionControlEditorPlugin::_initialize_vcs() {
 	if (_load_plugin(selected_plugin)) {
 		_set_up();
 
-		ProjectSettings::get_singleton()->set("editor/version_control/autoload_on_startup", true);
-		ProjectSettings::get_singleton()->set("editor/version_control/plugin_name", selected_plugin);
+		ProjectSettings::get_singleton()->set("editor/version_control_autoload_on_startup", true);
+		ProjectSettings::get_singleton()->set("editor/version_control_plugin_name", selected_plugin);
 		ProjectSettings::get_singleton()->save();
 	}
 }
@@ -232,6 +234,13 @@ void VersionControlEditorPlugin::_refresh_branch_list() {
 	}
 }
 
+String VersionControlEditorPlugin::_get_date_string_from(int64_t p_unix_timestamp, int64_t p_offset_minutes) const {
+	return vformat(
+			"%s %s",
+			Time::get_singleton()->get_datetime_string_from_unix_time(p_unix_timestamp + p_offset_minutes * 60, true),
+			Time::get_singleton()->get_offset_string_from_offset_minutes(p_offset_minutes));
+}
+
 void VersionControlEditorPlugin::_refresh_commit_list() {
 	CHECK_PLUGIN_INITIALIZED();
 
@@ -246,19 +255,25 @@ void VersionControlEditorPlugin::_refresh_commit_list() {
 		// Only display the first line of a commit message
 		int line_ending = commit.msg.find_char('\n');
 		String commit_display_msg = commit.msg.substr(0, line_ending);
+		String commit_date_string = _get_date_string_from(commit.unix_timestamp, commit.offset_minutes);
 
 		Dictionary meta_data;
 		meta_data["commit_id"] = commit.id;
 		meta_data["commit_title"] = commit_display_msg;
 		meta_data["commit_subtitle"] = commit.msg.substr(line_ending).strip_edges();
-		meta_data["commit_date"] = commit.date;
+		meta_data["commit_unix_timestamp"] = commit.unix_timestamp;
 		meta_data["commit_author"] = commit.author;
+		meta_data["commit_date_string"] = commit_date_string;
 
 		item->set_text(0, commit_display_msg);
-		item->set_text(1, commit.date.strip_edges());
+		item->set_text(1, commit_date_string);
 		item->set_text(2, commit.author.strip_edges());
 		item->set_metadata(0, meta_data);
 	}
+}
+
+void VersionControlEditorPlugin::_set_commit_list_size(int p_index) {
+	_refresh_commit_list();
 }
 
 void VersionControlEditorPlugin::_refresh_remote_list() {
@@ -400,7 +415,10 @@ void VersionControlEditorPlugin::_refresh_stage_area() {
 
 	int total_changes = status_files.size();
 	String commit_tab_title = TTR("Commit") + (total_changes > 0 ? " (" + itos(total_changes) + ")" : "");
-	dock_vbc->set_tab_title(version_commit_dock->get_index(), commit_tab_title);
+	TabContainer *dock_vbc = Object::cast_to<TabContainer>(version_commit_dock->get_parent_control());
+	if (dock_vbc) {
+		dock_vbc->set_tab_title(version_commit_dock->get_index(), commit_tab_title);
+	}
 }
 
 void VersionControlEditorPlugin::_discard_file(String p_file_path, EditorVCSInterface::ChangeType p_change) {
@@ -591,12 +609,13 @@ void VersionControlEditorPlugin::_display_diff(int p_idx) {
 		String commit_subtitle = meta_data["commit_subtitle"];
 		String commit_date = meta_data["commit_date"];
 		String commit_author = meta_data["commit_author"];
+		String commit_date_string = meta_data["commit_date_string"];
 
 		diff->push_font(EditorNode::get_singleton()->get_gui_base()->get_font("doc_bold", "EditorFonts"));
 		diff->push_color(EditorNode::get_singleton()->get_gui_base()->get_color("accent_color", "Editor"));
 		diff->add_text(TTR("Commit:") + " " + commit_id + "\n");
 		diff->add_text(TTR("Author:") + " " + commit_author + "\n");
-		diff->add_text(TTR("Date:") + " " + commit_date + "\n");
+		diff->add_text(TTR("Date:") + " " + commit_date_string + "\n");
 		if (!commit_subtitle.empty()) {
 			diff->add_text(TTR("Subtitle:") + " " + commit_subtitle + "\n");
 		}
@@ -921,7 +940,7 @@ void VersionControlEditorPlugin::_commit_message_gui_input(const Ref<InputEvent>
 
 void VersionControlEditorPlugin::register_editor() {
 	EditorNode::get_singleton()->add_control_to_dock(EditorNode::DOCK_SLOT_RIGHT_UL, version_commit_dock);
-	dock_vbc = (TabContainer *)version_commit_dock->get_parent_control();
+	TabContainer *dock_vbc = Object::cast_to<TabContainer>(version_commit_dock->get_parent_control());
 	dock_vbc->set_tab_title(version_commit_dock->get_index(), TTR("Commit"));
 
 	ToolButton *vc = EditorNode::get_singleton()->add_bottom_panel_item(TTR("Version Control"), version_control_dock);
@@ -1045,6 +1064,8 @@ VersionControlEditorPlugin::VersionControlEditorPlugin() {
 	set_up_password->connect("text_changed", this, "_update_set_up_warning");
 	set_up_password_input->add_child(set_up_password);
 
+	const String home_dir = OS::get_singleton()->has_environment("HOME") ? OS::get_singleton()->get_environment("HOME") : OS::get_singleton()->get_system_dir(OS::SYSTEM_DIR_DOCUMENTS);
+
 	HBoxContainer *set_up_ssh_public_key_input = memnew(HBoxContainer);
 	set_up_ssh_public_key_input->set_h_size_flags(Control::SIZE_EXPAND_FILL);
 	set_up_settings_vbc->add_child(set_up_ssh_public_key_input);
@@ -1068,10 +1089,7 @@ VersionControlEditorPlugin::VersionControlEditorPlugin() {
 	set_up_ssh_public_key_file_dialog->set_access(FileDialog::ACCESS_FILESYSTEM);
 	set_up_ssh_public_key_file_dialog->set_mode(FileDialog::MODE_OPEN_FILE);
 	set_up_ssh_public_key_file_dialog->set_show_hidden_files(true);
-	// TODO: Make this start at the user's home folder
-	DirAccess *d = DirAccess::open(OS::get_singleton()->get_system_dir(OS::SystemDir::SYSTEM_DIR_DOCUMENTS));
-	d->change_dir("../");
-	set_up_ssh_public_key_file_dialog->set_current_dir(d->get_current_dir());
+	set_up_ssh_public_key_file_dialog->set_current_dir(home_dir);
 	set_up_ssh_public_key_file_dialog->connect("file_selected", this, "_ssh_public_key_selected");
 	set_up_ssh_public_key_input_hbc->add_child(set_up_ssh_public_key_file_dialog);
 
@@ -1104,9 +1122,7 @@ VersionControlEditorPlugin::VersionControlEditorPlugin() {
 	set_up_ssh_private_key_file_dialog->set_access(FileDialog::ACCESS_FILESYSTEM);
 	set_up_ssh_private_key_file_dialog->set_mode(FileDialog::MODE_OPEN_FILE);
 	set_up_ssh_private_key_file_dialog->set_show_hidden_files(true);
-	// TODO: Make this start at the user's home folder
-	set_up_ssh_private_key_file_dialog->set_current_dir(d->get_current_dir());
-	memdelete(d);
+	set_up_ssh_private_key_file_dialog->set_current_dir(home_dir);
 	set_up_ssh_private_key_file_dialog->connect("file_selected", this, "_ssh_private_key_selected");
 	set_up_ssh_private_key_input_hbc->add_child(set_up_ssh_private_key_file_dialog);
 
@@ -1263,13 +1279,13 @@ VersionControlEditorPlugin::VersionControlEditorPlugin() {
 
 	commit_list_size_button = memnew(OptionButton);
 	commit_list_size_button->set_tooltip(TTR("Commit list size"));
-	commit_list_size_button->add_item(TTR("10"));
+	commit_list_size_button->add_item("10");
 	commit_list_size_button->set_item_metadata(0, 10);
-	commit_list_size_button->add_item(TTR("20"));
-	commit_list_size_button->set_item_metadata(0, 20);
-	commit_list_size_button->add_item(TTR("30"));
-	commit_list_size_button->set_item_metadata(0, 30);
-	commit_list_size_button->connect("pressed", this, "_refresh_commit_list");
+	commit_list_size_button->add_item("20");
+	commit_list_size_button->set_item_metadata(1, 20);
+	commit_list_size_button->add_item("30");
+	commit_list_size_button->set_item_metadata(2, 30);
+	commit_list_size_button->connect("item_selected", this, "_set_commit_list_size");
 	commit_list_hbc->add_child(commit_list_size_button);
 
 	commit_list = memnew(Tree);

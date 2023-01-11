@@ -273,6 +273,10 @@ bool AbstractPolygon2DEditor::forward_gui_input(const Ref<InputEvent> &p_event) 
 		return false;
 	}
 
+	if (!_get_node()->is_visible_in_tree()) {
+		return false;
+	}
+
 	Ref<InputEventMouseButton> mb = p_event;
 
 	if (!_has_resource()) {
@@ -315,9 +319,9 @@ bool AbstractPolygon2DEditor::forward_gui_input(const Ref<InputEvent> &p_event) 
 							return true;
 						} else {
 							Vector<Vector2> vertices2 = _get_polygon(insert.polygon);
-							pre_move_edit = vertices2;
 							edited_point = PosVertex(insert.polygon, insert.vertex + 1, xform.affine_inverse().xform(insert.pos));
 							vertices2.insert(edited_point.vertex, edited_point.pos);
+							pre_move_edit = vertices2;
 							selected_point = edited_point;
 							edge_point = PosVertex();
 
@@ -503,6 +507,10 @@ bool AbstractPolygon2DEditor::forward_gui_input(const Ref<InputEvent> &p_event) 
 
 void AbstractPolygon2DEditor::forward_canvas_draw_over_viewport(Control *p_overlay) {
 	if (!_get_node()) {
+		return;
+	}
+
+	if (!_get_node()->is_visible_in_tree()) {
 		return;
 	}
 

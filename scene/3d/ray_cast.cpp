@@ -256,6 +256,13 @@ void RayCast::remove_exception(const Object *p_object) {
 
 void RayCast::clear_exceptions() {
 	exclude.clear();
+
+	if (exclude_parent_body && is_inside_tree()) {
+		CollisionObject *parent = Object::cast_to<CollisionObject>(get_parent());
+		if (parent) {
+			exclude.insert(parent->get_rid());
+		}
+	}
 }
 
 void RayCast::set_collide_with_areas(bool p_clip) {
@@ -404,6 +411,12 @@ void RayCast::_create_debug_shape() {
 	Ref<ArrayMesh> mesh = memnew(ArrayMesh);
 
 	MeshInstance *mi = memnew(MeshInstance);
+#ifdef TOOLS_ENABLED
+	// This enables the debug helper to show up in editor runs.
+	// However it should not show up during export, because global mode
+	// can slow the portal system, and this should only be used for debugging.
+	mi->set_portal_mode(CullInstance::PORTAL_MODE_GLOBAL);
+#endif
 	mi->set_mesh(mesh);
 	add_child(mi);
 

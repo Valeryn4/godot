@@ -35,7 +35,6 @@
 //#include "core/math/quick_hull.h"
 //#include "core/math/convex_hull.h"
 #include "core/os/thread.h"
-#include "scene/3d/collision_shape.h"
 #include "scene/3d/mesh_instance.h"
 #include "scene/3d/multimesh_instance.h"
 #include "scene/3d/physics_body.h"
@@ -126,6 +125,28 @@ void NavigationMeshGenerator::_add_mesh(const Ref<Mesh> &p_mesh, const Transform
 	}
 }
 
+void NavigationMeshGenerator::_add_mesh_array(const Array &p_array, const Transform &p_xform, Vector<float> &p_vertices, Vector<int> &p_indices) {
+	PoolVector<Vector3> mesh_vertices = p_array[Mesh::ARRAY_VERTEX];
+	PoolVector<Vector3>::Read vr = mesh_vertices.read();
+
+	PoolVector<int> mesh_indices = p_array[Mesh::ARRAY_INDEX];
+	PoolVector<int>::Read ir = mesh_indices.read();
+
+	const int face_count = mesh_indices.size() / 3;
+	const int current_vertex_count = p_vertices.size() / 3;
+
+	for (int j = 0; j < mesh_vertices.size(); j++) {
+		_add_vertex(p_xform.xform(vr[j]), p_vertices);
+	}
+
+	for (int j = 0; j < face_count; j++) {
+		// CCW
+		p_indices.push_back(current_vertex_count + (ir[j * 3 + 0]));
+		p_indices.push_back(current_vertex_count + (ir[j * 3 + 2]));
+		p_indices.push_back(current_vertex_count + (ir[j * 3 + 1]));
+	}
+}
+
 void NavigationMeshGenerator::_add_faces(const PoolVector3Array &p_faces, const Transform &p_xform, Vector<float> &p_vertices, Vector<int> &p_indices) {
 	int face_count = p_faces.size() / 3;
 	int current_vertex_count = p_vertices.size() / 3;
@@ -141,26 +162,28 @@ void NavigationMeshGenerator::_add_faces(const PoolVector3Array &p_faces, const 
 	}
 }
 
-void NavigationMeshGenerator::_parse_geometry(Transform p_accumulated_transform, Node *p_node, Vector<float> &p_vertices, Vector<int> &p_indices, int p_generate_from, uint32_t p_collision_mask, bool p_recurse_children) {
+void NavigationMeshGenerator::_parse_geometry(const Transform &p_navmesh_xform, Node *p_node, Vector<float> &p_vertices, Vector<int> &p_indices, int p_generate_from, uint32_t p_collision_mask, bool p_recurse_children) {
 	if (Object::cast_to<MeshInstance>(p_node) && p_generate_from != NavigationMesh::PARSED_GEOMETRY_STATIC_COLLIDERS) {
 		MeshInstance *mesh_instance = Object::cast_to<MeshInstance>(p_node);
 		Ref<Mesh> mesh = mesh_instance->get_mesh();
 		if (mesh.is_valid()) {
-			_add_mesh(mesh, p_accumulated_transform * mesh_instance->get_transform(), p_vertices, p_indices);
+			_add_mesh(mesh, p_navmesh_xform * mesh_instance->get_global_transform(), p_vertices, p_indices);
 		}
 	}
 
 	if (Object::cast_to<MultiMeshInstance>(p_node) && p_generate_from != NavigationMesh::PARSED_GEOMETRY_STATIC_COLLIDERS) {
 		MultiMeshInstance *multimesh_instance = Object::cast_to<MultiMeshInstance>(p_node);
 		Ref<MultiMesh> multimesh = multimesh_instance->get_multimesh();
-		Ref<Mesh> mesh = multimesh->get_mesh();
-		if (mesh.is_valid()) {
-			int n = multimesh->get_visible_instance_count();
-			if (n == -1) {
-				n = multimesh->get_instance_count();
-			}
-			for (int i = 0; i < n; i++) {
-				_add_mesh(mesh, p_accumulated_transform * multimesh->get_instance_transform(i), p_vertices, p_indices);
+		if (multimesh.is_valid()) {
+			Ref<Mesh> mesh = multimesh->get_mesh();
+			if (mesh.is_valid()) {
+				int n = multimesh->get_visible_instance_count();
+				if (n == -1) {
+					n = multimesh->get_instance_count();
+				}
+				for (int i = 0; i < n; i++) {
+					_add_mesh(mesh, p_navmesh_xform * multimesh_instance->get_global_transform() * multimesh->get_instance_transform(i), p_vertices, p_indices);
+				}
 			}
 		}
 	}
@@ -172,7 +195,7 @@ void NavigationMeshGenerator::_parse_geometry(Transform p_accumulated_transform,
 		if (!meshes.empty()) {
 			Ref<Mesh> mesh = meshes[1];
 			if (mesh.is_valid()) {
-				_add_mesh(mesh, p_accumulated_transform * csg_shape->get_transform(), p_vertices, p_indices);
+				_add_mesh(mesh, p_navmesh_xform * csg_shape->get_global_transform(), p_vertices, p_indices);
 			}
 		}
 	}
@@ -182,50 +205,52 @@ void NavigationMeshGenerator::_parse_geometry(Transform p_accumulated_transform,
 		StaticBody *static_body = Object::cast_to<StaticBody>(p_node);
 
 		if (static_body->get_collision_layer() & p_collision_mask) {
-			for (int i = 0; i < p_node->get_child_count(); ++i) {
-				Node *child = p_node->get_child(i);
-				if (Object::cast_to<CollisionShape>(child)) {
-					CollisionShape *col_shape = Object::cast_to<CollisionShape>(child);
+			List<uint32_t> shape_owners;
+			static_body->get_shape_owners(&shape_owners);
+			for (List<uint32_t>::Element *E = shape_owners.front(); E; E = E->next()) {
+				uint32_t shape_owner = E->get();
+				const int shape_count = static_body->shape_owner_get_shape_count(shape_owner);
+				for (int i = 0; i < shape_count; i++) {
+					if (static_body->is_shape_owner_disabled(i)) {
+						continue;
+					}
+					Ref<Shape> s = static_body->shape_owner_get_shape(shape_owner, i);
+					if (s.is_null()) {
+						continue;
+					}
 
-					Transform transform = p_accumulated_transform * static_body->get_transform() * col_shape->get_transform();
-
-					Ref<Mesh> mesh;
-					Ref<Shape> s = col_shape->get_shape();
+					const Transform transform = p_navmesh_xform * static_body->get_global_transform() * static_body->shape_owner_get_transform(shape_owner);
 
 					BoxShape *box = Object::cast_to<BoxShape>(*s);
 					if (box) {
-						Ref<CubeMesh> cube_mesh;
-						cube_mesh.instance();
-						cube_mesh->set_size(box->get_extents() * 2.0);
-						mesh = cube_mesh;
+						Array arr;
+						arr.resize(VS::ARRAY_MAX);
+						CubeMesh::create_mesh_array(arr, box->get_extents() * 2.0);
+						_add_mesh_array(arr, transform, p_vertices, p_indices);
 					}
 
 					CapsuleShape *capsule = Object::cast_to<CapsuleShape>(*s);
 					if (capsule) {
-						Ref<CapsuleMesh> capsule_mesh;
-						capsule_mesh.instance();
-						capsule_mesh->set_radius(capsule->get_radius());
-						capsule_mesh->set_mid_height(capsule->get_height() / 2.0);
-						mesh = capsule_mesh;
+						Array arr;
+						arr.resize(VS::ARRAY_MAX);
+						CapsuleMesh::create_mesh_array(arr, capsule->get_radius(), capsule->get_height() / 2.0);
+						_add_mesh_array(arr, transform, p_vertices, p_indices);
 					}
 
 					CylinderShape *cylinder = Object::cast_to<CylinderShape>(*s);
 					if (cylinder) {
-						Ref<CylinderMesh> cylinder_mesh;
-						cylinder_mesh.instance();
-						cylinder_mesh->set_height(cylinder->get_height());
-						cylinder_mesh->set_bottom_radius(cylinder->get_radius());
-						cylinder_mesh->set_top_radius(cylinder->get_radius());
-						mesh = cylinder_mesh;
+						Array arr;
+						arr.resize(VS::ARRAY_MAX);
+						CylinderMesh::create_mesh_array(arr, cylinder->get_radius(), cylinder->get_radius(), cylinder->get_height());
+						_add_mesh_array(arr, transform, p_vertices, p_indices);
 					}
 
 					SphereShape *sphere = Object::cast_to<SphereShape>(*s);
 					if (sphere) {
-						Ref<SphereMesh> sphere_mesh;
-						sphere_mesh.instance();
-						sphere_mesh->set_radius(sphere->get_radius());
-						sphere_mesh->set_height(sphere->get_radius() * 2.0);
-						mesh = sphere_mesh;
+						Array arr;
+						arr.resize(VS::ARRAY_MAX);
+						SphereMesh::create_mesh_array(arr, sphere->get_radius(), sphere->get_radius() * 2.0);
+						_add_mesh_array(arr, transform, p_vertices, p_indices);
 					}
 
 					ConcavePolygonShape *concave_polygon = Object::cast_to<ConcavePolygonShape>(*s);
@@ -256,10 +281,6 @@ void NavigationMeshGenerator::_parse_geometry(Transform p_accumulated_transform,
 							_add_faces(faces, transform, p_vertices, p_indices);
 						}
 					}
-
-					if (mesh.is_valid()) {
-						_add_mesh(mesh, transform, p_vertices, p_indices);
-					}
 				}
 			}
 		}
@@ -271,12 +292,12 @@ void NavigationMeshGenerator::_parse_geometry(Transform p_accumulated_transform,
 	if (gridmap) {
 		if (p_generate_from != NavigationMesh::PARSED_GEOMETRY_STATIC_COLLIDERS) {
 			Array meshes = gridmap->get_meshes();
-			Transform xform = gridmap->get_transform();
+			Transform xform = gridmap->get_global_transform();
 			for (int i = 0; i < meshes.size(); i += 2) {
 				Ref<Mesh> mesh = meshes[i + 1];
 				if (mesh.is_valid()) {
 					Transform mesh_xform = meshes[i];
-					_add_mesh(mesh, p_accumulated_transform * xform * mesh_xform, p_vertices, p_indices);
+					_add_mesh(mesh, p_navmesh_xform * xform * mesh_xform, p_vertices, p_indices);
 				}
 			}
 		}
@@ -287,44 +308,39 @@ void NavigationMeshGenerator::_parse_geometry(Transform p_accumulated_transform,
 				RID shape = shapes[i + 1];
 				PhysicsServer::ShapeType type = PhysicsServer::get_singleton()->shape_get_type(shape);
 				Variant data = PhysicsServer::get_singleton()->shape_get_data(shape);
-				Ref<Mesh> mesh;
 
 				switch (type) {
 					case PhysicsServer::SHAPE_SPHERE: {
 						real_t radius = data;
-						Ref<SphereMesh> sphere_mesh;
-						sphere_mesh.instance();
-						sphere_mesh->set_radius(radius);
-						sphere_mesh->set_height(radius * 2.0);
-						mesh = sphere_mesh;
+						Array arr;
+						arr.resize(VS::ARRAY_MAX);
+						SphereMesh::create_mesh_array(arr, radius, radius * 2.0);
+						_add_mesh_array(arr, shapes[i], p_vertices, p_indices);
 					} break;
 					case PhysicsServer::SHAPE_BOX: {
 						Vector3 extents = data;
-						Ref<CubeMesh> box_mesh;
-						box_mesh.instance();
-						box_mesh->set_size(2.0 * extents);
-						mesh = box_mesh;
+						Array arr;
+						arr.resize(VS::ARRAY_MAX);
+						CubeMesh::create_mesh_array(arr, extents * 2.0);
+						_add_mesh_array(arr, shapes[i], p_vertices, p_indices);
 					} break;
 					case PhysicsServer::SHAPE_CAPSULE: {
 						Dictionary dict = data;
 						real_t radius = dict["radius"];
 						real_t height = dict["height"];
-						Ref<CapsuleMesh> capsule_mesh;
-						capsule_mesh.instance();
-						capsule_mesh->set_radius(radius);
-						capsule_mesh->set_mid_height(0.5 * height);
-						mesh = capsule_mesh;
+						Array arr;
+						arr.resize(VS::ARRAY_MAX);
+						CapsuleMesh::create_mesh_array(arr, radius, height * 0.5);
+						_add_mesh_array(arr, shapes[i], p_vertices, p_indices);
 					} break;
 					case PhysicsServer::SHAPE_CYLINDER: {
 						Dictionary dict = data;
 						real_t radius = dict["radius"];
 						real_t height = dict["height"];
-						Ref<CylinderMesh> cylinder_mesh;
-						cylinder_mesh.instance();
-						cylinder_mesh->set_height(height);
-						cylinder_mesh->set_bottom_radius(radius);
-						cylinder_mesh->set_top_radius(radius);
-						mesh = cylinder_mesh;
+						Array arr;
+						arr.resize(VS::ARRAY_MAX);
+						CylinderMesh::create_mesh_array(arr, radius, radius, height);
+						_add_mesh_array(arr, shapes[i], p_vertices, p_indices);
 					} break;
 					case PhysicsServer::SHAPE_CONVEX_POLYGON: {
 						PoolVector3Array vertices = data;
@@ -356,23 +372,14 @@ void NavigationMeshGenerator::_parse_geometry(Transform p_accumulated_transform,
 						WARN_PRINT("Unsupported collision shape type.");
 					} break;
 				}
-
-				if (mesh.is_valid()) {
-					_add_mesh(mesh, shapes[i], p_vertices, p_indices);
-				}
 			}
 		}
 	}
 #endif
 
-	if (Object::cast_to<Spatial>(p_node)) {
-		Spatial *spatial = Object::cast_to<Spatial>(p_node);
-		p_accumulated_transform = p_accumulated_transform * spatial->get_transform();
-	}
-
 	if (p_recurse_children) {
 		for (int i = 0; i < p_node->get_child_count(); i++) {
-			_parse_geometry(p_accumulated_transform, p_node->get_child(i), p_vertices, p_indices, p_generate_from, p_collision_mask, p_recurse_children);
+			_parse_geometry(p_navmesh_xform, p_node->get_child(i), p_vertices, p_indices, p_generate_from, p_collision_mask, p_recurse_children);
 		}
 	}
 }
@@ -445,7 +452,7 @@ void NavigationMeshGenerator::_build_recast_navigation_mesh(
 	cfg.minRegionArea = (int)(p_nav_mesh->get_region_min_size() * p_nav_mesh->get_region_min_size());
 	cfg.mergeRegionArea = (int)(p_nav_mesh->get_region_merge_size() * p_nav_mesh->get_region_merge_size());
 	cfg.maxVertsPerPoly = (int)p_nav_mesh->get_verts_per_poly();
-	cfg.detailSampleDist = p_nav_mesh->get_detail_sample_distance() < 0.9f ? 0 : p_nav_mesh->get_cell_size() * p_nav_mesh->get_detail_sample_distance();
+	cfg.detailSampleDist = MAX(p_nav_mesh->get_cell_size() * p_nav_mesh->get_detail_sample_distance(), 0.1f);
 	cfg.detailSampleMaxError = p_nav_mesh->get_cell_height() * p_nav_mesh->get_detail_sample_max_error();
 
 	cfg.bmin[0] = bmin[0];
@@ -455,11 +462,34 @@ void NavigationMeshGenerator::_build_recast_navigation_mesh(
 	cfg.bmax[1] = bmax[1];
 	cfg.bmax[2] = bmax[2];
 
+	AABB baking_aabb = p_nav_mesh->get_filter_baking_aabb();
+
+	bool aabb_has_no_volume = baking_aabb.has_no_area();
+
+	if (!aabb_has_no_volume) {
+		Vector3 baking_aabb_offset = p_nav_mesh->get_filter_baking_aabb_offset();
+
+		cfg.bmin[0] = baking_aabb.position[0] + baking_aabb_offset.x;
+		cfg.bmin[1] = baking_aabb.position[1] + baking_aabb_offset.y;
+		cfg.bmin[2] = baking_aabb.position[2] + baking_aabb_offset.z;
+		cfg.bmax[0] = cfg.bmin[0] + baking_aabb.size[0];
+		cfg.bmax[1] = cfg.bmin[1] + baking_aabb.size[1];
+		cfg.bmax[2] = cfg.bmin[2] + baking_aabb.size[2];
+	}
+
 #ifdef TOOLS_ENABLED
 	if (ep)
 		ep->step(TTR("Calculating grid size..."), 2);
 #endif
 	rcCalcGridSize(cfg.bmin, cfg.bmax, cfg.cs, &cfg.width, &cfg.height);
+
+	// ~30000000 seems to be around sweetspot where Editor baking breaks
+	if ((cfg.width * cfg.height) > 30000000) {
+		WARN_PRINT("NavigationMesh baking process will likely fail."
+				   "\nSource geometry is suspiciously big for the current Cell Size and Cell Height in the NavMesh Resource bake settings."
+				   "\nIf baking does not fail, the resulting NavigationMesh will create serious pathfinding performance issues."
+				   "\nIt is advised to increase Cell Size and/or Cell Height in the NavMesh Resource bake settings or reduce the size / scale of the source geometry.");
+	}
 
 #ifdef TOOLS_ENABLED
 	if (ep)
@@ -586,7 +616,14 @@ void NavigationMeshGenerator::bake(Ref<NavigationMesh> p_nav_mesh, Node *p_node)
 	ERR_FAIL_COND_MSG(!p_nav_mesh.is_valid(), "Invalid Navigation Mesh");
 
 #ifdef TOOLS_ENABLED
-	EditorProgress *ep(NULL);
+	EditorProgress *ep(nullptr);
+	// FIXME
+#endif
+#if 0
+	// After discussion on devchat disabled EditorProgress for now as it is not thread-safe and uses hacks and Main::iteration() for steps.
+	// EditorProgress randomly crashes the Engine when the bake function is used with a thread e.g. inside Editor with a tool script and procedural navigation
+	// This was not a problem in older versions as previously Godot was unable to (re)bake NavigationMesh at runtime.
+	// If EditorProgress is fixed and made thread-safe this should be enabled again.
 	if (Engine::get_singleton()->is_editor_hint()) {
 		ep = memnew(EditorProgress("bake", TTR("Navigation Mesh Generator Setup:"), 11));
 	}
@@ -606,7 +643,7 @@ void NavigationMeshGenerator::bake(Ref<NavigationMesh> p_nav_mesh, Node *p_node)
 		p_node->get_tree()->get_nodes_in_group(p_nav_mesh->get_source_group_name(), &parse_nodes);
 	}
 
-	Transform navmesh_xform = Object::cast_to<Spatial>(p_node)->get_transform().affine_inverse();
+	Transform navmesh_xform = Object::cast_to<Spatial>(p_node)->get_global_transform().affine_inverse();
 	for (const List<Node *>::Element *E = parse_nodes.front(); E; E = E->next()) {
 		NavigationMesh::ParsedGeometryType geometry_type = p_nav_mesh->get_parsed_geometry_type();
 		uint32_t collision_mask = p_nav_mesh->get_collision_mask();

@@ -58,8 +58,6 @@ class SpriteFrames : public Resource {
 	Array _get_animations() const;
 	void _set_animations(const Array &p_animations);
 
-	Vector<String> _get_animation_list() const;
-
 protected:
 	static void _bind_methods();
 
@@ -196,6 +194,8 @@ public:
 	bool is_flipped_v() const;
 
 	virtual String get_configuration_warning() const;
+	virtual void get_argument_options(const StringName &p_function, int p_idx, List<String> *r_options) const;
+
 	AnimatedSprite();
 };
 

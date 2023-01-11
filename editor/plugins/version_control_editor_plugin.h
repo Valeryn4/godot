@@ -98,7 +98,6 @@ private:
 	HashMap<EditorVCSInterface::ChangeType, Color> change_type_to_color;
 	HashMap<EditorVCSInterface::ChangeType, Ref<Texture>> change_type_to_icon;
 
-	TabContainer *dock_vbc;
 	VBoxContainer *version_commit_dock;
 	Tree *staged_files;
 	Tree *unstaged_files;
@@ -186,6 +185,8 @@ private:
 	void _commit_message_gui_input(const Ref<InputEvent> &p_event);
 	void _extra_option_selected(int p_index);
 	bool _is_staging_area_empty();
+	String _get_date_string_from(int64_t p_unix_timestamp, int64_t p_offset_minutes) const;
+	void _set_commit_list_size(int p_index);
 
 	friend class EditorVCSInterface;
 
@@ -212,4 +213,4 @@ public:
 	~VersionControlEditorPlugin();
 };
 
-#endif // !VERSION_CONTROL_EDITOR_PLUGIN_H
+#endif // VERSION_CONTROL_EDITOR_PLUGIN_H

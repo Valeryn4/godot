@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="Viewport" inherits="Node" version="3.5">
+<class name="Viewport" inherits="Node" version="3.5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
 	<brief_description>
 		Creates a sub-view into the screen.
 	</brief_description>
@@ -56,7 +56,7 @@
 		<method name="get_mouse_position" qualifiers="const">
 			<return type="Vector2" />
 			<description>
-				Returns the mouse position relative to the viewport.
+				Returns the mouse's position in this [Viewport] using the coordinate system of this [Viewport].
 			</description>
 		</method>
 		<method name="get_render_info">
@@ -114,10 +114,17 @@
 				Returns [code]true[/code] if there are visible modals on-screen.
 			</description>
 		</method>
+		<method name="gui_is_drag_successful" qualifiers="const">
+			<return type="bool" />
+			<description>
+				Returns [code]true[/code] if the drag operation is successful.
+			</description>
+		</method>
 		<method name="gui_is_dragging" qualifiers="const">
 			<return type="bool" />
 			<description>
 				Returns [code]true[/code] if the viewport is currently performing a drag operation.
+				Alternative to [constant Node.NOTIFICATION_DRAG_BEGIN] and [constant Node.NOTIFICATION_DRAG_END] when you prefer polling the value.
 			</description>
 		</method>
 		<method name="input">
@@ -183,7 +190,7 @@
 			<return type="void" />
 			<argument index="0" name="to_position" type="Vector2" />
 			<description>
-				Warps the mouse to a position relative to the viewport.
+				Moves the mouse pointer to the specified position in this [Viewport] using the coordinate system of this [Viewport].
 			</description>
 		</method>
 	</methods>
@@ -236,7 +243,7 @@
 			The multisample anti-aliasing mode. A higher number results in smoother edges at the cost of significantly worse performance. A value of 4 is best unless targeting very high-end systems.
 		</member>
 		<member name="own_world" type="bool" setter="set_use_own_world" getter="is_using_own_world" default="false">
-			If [code]true[/code], the viewport will use [World] defined in [code]world[/code] property.
+			If [code]true[/code], the viewport will use a unique copy of the [World] defined in [member world].
 		</member>
 		<member name="physics_object_picking" type="bool" setter="set_physics_object_picking" getter="get_physics_object_picking" default="false">
 			If [code]true[/code], the objects rendered by viewport become subjects of mouse picking process.
@@ -268,7 +275,7 @@
 		</member>
 		<member name="shadow_atlas_size" type="int" setter="set_shadow_atlas_size" getter="get_shadow_atlas_size" default="0">
 			The shadow atlas' resolution (used for omni and spot lights). The value will be rounded up to the nearest power of 2.
-			[b]Note:[/b] If this is set to 0, shadows won't be visible. Since user-created viewports default to a value of 0, this value must be set above 0 manually.
+			[b]Note:[/b] If this is set to [code]0[/code], both point [i]and[/i] directional shadows won't be visible. Since user-created viewports default to a value of [code]0[/code], this value must be set above [code]0[/code] manually (typically at least [code]256[/code]).
 		</member>
 		<member name="sharpen_intensity" type="float" setter="set_sharpen_intensity" getter="get_sharpen_intensity" default="0.0">
 			If set to a value greater than [code]0.0[/code], contrast-adaptive sharpening will be applied to the 3D viewport. This has a low performance cost and can be used to recover some of the sharpness lost from using FXAA. Values around [code]0.5[/code] generally give the best results. See also [member fxaa].
@@ -284,6 +291,7 @@
 		</member>
 		<member name="usage" type="int" setter="set_usage" getter="get_usage" enum="Viewport.Usage" default="2">
 			The rendering mode of viewport.
+			[b]Note:[/b] If set to [constant USAGE_2D] or [constant USAGE_2D_NO_SAMPLING], [member hdr] will have no effect when enabled since HDR is not supported for 2D.
 		</member>
 		<member name="use_32_bpc_depth" type="bool" setter="set_use_32_bpc_depth" getter="get_use_32_bpc_depth" default="false">
 			If [code]true[/code], allocates the viewport's framebuffer with full floating-point precision (32-bit) instead of half floating-point precision (16-bit). Only effective when [member hdr] is also enabled.

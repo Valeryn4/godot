@@ -86,6 +86,9 @@ uint64_t OS::get_system_time_secs() const {
 uint64_t OS::get_system_time_msecs() const {
 	return 0;
 }
+double OS::get_subsecond_unix_time() const {
+	return 0.0;
+}
 void OS::debug_break(){
 
 	// something
@@ -146,6 +149,10 @@ bool OS::is_in_low_processor_usage_mode() const {
 	return low_processor_usage_mode;
 }
 
+void OS::set_update_vital_only(bool p_enabled) {
+	_update_vital_only = p_enabled;
+}
+
 void OS::set_low_processor_usage_mode_sleep_usec(int p_usec) {
 	low_processor_usage_mode_sleep_usec = p_usec;
 }
@@ -166,6 +173,14 @@ bool OS::has_clipboard() const {
 	return !get_clipboard().empty();
 }
 
+void OS::set_clipboard_primary(const String &p_text) {
+	_primary_clipboard = p_text;
+}
+
+String OS::get_clipboard_primary() const {
+	return _primary_clipboard;
+}
+
 String OS::get_executable_path() const {
 	return _execpath;
 }
@@ -175,7 +190,7 @@ int OS::get_process_id() const {
 };
 
 void OS::vibrate_handheld(int p_duration_ms) {
-	WARN_PRINT("vibrate_handheld() only works with Android and iOS");
+	WARN_PRINT("vibrate_handheld() only works with Android, iOS and HTML5");
 }
 
 bool OS::is_stdout_verbose() const {
@@ -291,6 +306,11 @@ String OS::get_locale() const {
 // `get_locale()` in a way that's consistent for all platforms.
 String OS::get_locale_language() const {
 	return get_locale().left(3).replace("_", "");
+}
+
+// Embedded PCK offset.
+uint64_t OS::get_embedded_pck_offset() const {
+	return 0;
 }
 
 // Helper function to ensure that a dir name/path will be valid on the OS
@@ -508,6 +528,10 @@ int OS::get_processor_count() const {
 	return 1;
 }
 
+String OS::get_processor_name() const {
+	return "";
+}
+
 Error OS::native_video_play(String p_path, float p_volume, String p_audio_track, String p_subtitle_track) {
 	return FAILED;
 }
@@ -647,19 +671,25 @@ bool OS::has_feature(const String &p_feature) {
 	if (sizeof(void *) == 4 && p_feature == "32") {
 		return true;
 	}
-#if defined(__x86_64) || defined(__x86_64__) || defined(__amd64__)
+#if defined(__x86_64) || defined(__x86_64__) || defined(__amd64__) || defined(_M_X64)
 	if (p_feature == "x86_64") {
 		return true;
 	}
-#elif (defined(__i386) || defined(__i386__))
+#elif defined(__i386) || defined(__i386__) || defined(_M_IX86)
+	if (p_feature == "x86_32") {
+		return true;
+	}
 	if (p_feature == "x86") {
 		return true;
 	}
-#elif defined(__aarch64__)
+#elif defined(__aarch64__) || defined(_M_ARM64)
 	if (p_feature == "arm64") {
 		return true;
 	}
-#elif defined(__arm__)
+#elif defined(__arm__) || defined(_M_ARM)
+	if (p_feature == "arm32") {
+		return true;
+	}
 #if defined(__ARM_ARCH_7A__)
 	if (p_feature == "armv7a" || p_feature == "armv7") {
 		return true;
@@ -689,6 +719,19 @@ bool OS::has_feature(const String &p_feature) {
 	}
 #endif
 	if (p_feature == "ppc") {
+		return true;
+	}
+#elif defined(__wasm__)
+#if defined(__wasm64__)
+	if (p_feature == "wasm64") {
+		return true;
+	}
+#elif defined(__wasm32__)
+	if (p_feature == "wasm32") {
+		return true;
+	}
+#endif
+	if (p_feature == "wasm") {
 		return true;
 	}
 #endif
@@ -834,6 +877,8 @@ OS::OS() {
 	_keep_screen_on = true; // set default value to true, because this had been true before godot 2.0.
 	low_processor_usage_mode = false;
 	low_processor_usage_mode_sleep_usec = 10000;
+	_update_vital_only = false;
+	_update_pending = false;
 	_verbose_stdout = false;
 	_debug_stdout = false;
 	_no_window = false;

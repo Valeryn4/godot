@@ -53,6 +53,7 @@ class SceneTreeEditor : public Control {
 		BUTTON_SIGNALS = 6,
 		BUTTON_GROUPS = 7,
 		BUTTON_PIN = 8,
+		BUTTON_UNIQUE = 9,
 	};
 
 	Tree *tree;
@@ -169,6 +170,7 @@ class SceneTreeDialog : public ConfirmationDialog {
 
 	void _select();
 	void _cancel();
+	void _selected_changed();
 	void _filter_changed(const String &p_filter);
 
 protected:
@@ -182,4 +184,4 @@ public:
 	~SceneTreeDialog();
 };
 
-#endif
+#endif // SCENE_TREE_EDITOR_H

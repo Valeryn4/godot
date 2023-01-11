@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" ?>
-<class name="EditorProperty" inherits="Container" version="3.5">
+<class name="EditorProperty" inherits="Container" version="3.5" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../class.xsd">
 	<brief_description>
 		Custom control to edit properties for adding into the inspector.
 	</brief_description>
@@ -96,6 +96,8 @@
 		<signal name="property_changed">
 			<argument index="0" name="property" type="String" />
 			<argument index="1" name="value" type="Variant" />
+			<argument index="2" name="field" type="String" />
+			<argument index="3" name="changing" type="bool" />
 			<description>
 				Do not emit this manually, use the [method emit_changed] method instead.
 			</description>

@@ -28,8 +28,8 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                */
 /*************************************************************************/
 
-#ifndef HTTPREQUEST_H
-#define HTTPREQUEST_H
+#ifndef HTTP_REQUEST_H
+#define HTTP_REQUEST_H
 
 #include "core/io/http_client.h"
 #include "core/os/file_access.h"
@@ -94,7 +94,7 @@ private:
 
 	int max_redirects;
 
-	int timeout;
+	double timeout;
 
 	void _redirect_request(const String &p_new_url);
 
@@ -138,8 +138,8 @@ public:
 
 	Timer *timer;
 
-	void set_timeout(int p_timeout);
-	int get_timeout();
+	void set_timeout(double p_timeout);
+	double get_timeout();
 
 	void _timeout();
 
@@ -156,4 +156,4 @@ public:
 
 VARIANT_ENUM_CAST(HTTPRequest::Result);
 
-#endif // HTTPREQUEST_H
+#endif // HTTP_REQUEST_H

@@ -686,6 +686,8 @@ void InputDefault::set_custom_mouse_cursor(const RES &p_cursor, CursorShape p_sh
 		return;
 	}
 
+	ERR_FAIL_INDEX(p_shape, Input::CURSOR_MAX);
+
 	OS::get_singleton()->set_custom_mouse_cursor(p_cursor, (OS::CursorShape)p_shape, p_hotspot);
 }
 
@@ -721,6 +723,10 @@ void InputDefault::set_use_input_buffering(bool p_enable) {
 	use_input_buffering = p_enable;
 }
 
+bool InputDefault::is_using_accumulated_input() {
+	return use_accumulated_input;
+}
+
 void InputDefault::set_use_accumulated_input(bool p_enable) {
 	use_accumulated_input = p_enable;
 }
@@ -742,7 +748,7 @@ void InputDefault::release_pressed_events() {
 
 InputDefault::InputDefault() {
 	use_input_buffering = false;
-	use_accumulated_input = false;
+	use_accumulated_input = true;
 	mouse_button_mask = 0;
 	emulate_touch_from_mouse = false;
 	emulate_mouse_from_touch = false;
@@ -835,11 +841,9 @@ void InputDefault::joy_axis(int p_device, int p_axis, float p_value) {
 		}
 
 		bool pressed = map.value > 0.5;
-		if (pressed == joy_buttons_pressed.has(_combine_device(map.index, p_device))) {
-			// Button already pressed or released; so ignore.
-			return;
+		if (pressed != joy_buttons_pressed.has(_combine_device(map.index, p_device))) {
+			_button_event(p_device, map.index, pressed);
 		}
-		_button_event(p_device, map.index, pressed);
 
 		// Ensure opposite D-Pad button is also released.
 		switch (map.index) {
@@ -986,7 +990,7 @@ InputDefault::JoyEvent InputDefault::_get_mapped_axis_event(const JoyDeviceMappi
 				value = -value;
 			}
 			if (binding.input.axis.range == FULL_AXIS ||
-					(binding.input.axis.range == POSITIVE_HALF_AXIS && value > 0) ||
+					(binding.input.axis.range == POSITIVE_HALF_AXIS && value >= 0) ||
 					(binding.input.axis.range == NEGATIVE_HALF_AXIS && value < 0)) {
 				event.type = binding.outputType;
 				float shifted_positive_value = 0;
@@ -1044,7 +1048,7 @@ InputDefault::JoyEvent InputDefault::_get_mapped_axis_event(const JoyDeviceMappi
 	return event;
 }
 
-void InputDefault::_get_mapped_hat_events(const JoyDeviceMapping &mapping, int p_hat, JoyEvent r_events[]) {
+void InputDefault::_get_mapped_hat_events(const JoyDeviceMapping &mapping, int p_hat, JoyEvent r_events[(size_t)HAT_MAX]) {
 	for (int i = 0; i < mapping.bindings.size(); i++) {
 		const JoyBinding binding = mapping.bindings[i];
 		if (binding.inputType == TYPE_HAT && binding.input.hat.hat == p_hat) {
@@ -1338,11 +1342,14 @@ String InputDefault::get_joy_button_string(int p_button) {
 
 int InputDefault::get_joy_button_index_from_string(String p_button) {
 	for (int i = 0; i < JOY_BUTTON_MAX; i++) {
-		if (p_button == _buttons[i]) {
+		if (_buttons[i] == nullptr) {
+			break;
+		}
+		if (p_button == String(_buttons[i])) {
 			return i;
 		}
 	}
-	ERR_FAIL_V(-1);
+	ERR_FAIL_V_MSG(-1, vformat("Could not find a button index matching the string \"%s\".", p_button));
 }
 
 int InputDefault::get_unused_joy_id() {
@@ -1361,9 +1368,12 @@ String InputDefault::get_joy_axis_string(int p_axis) {
 
 int InputDefault::get_joy_axis_index_from_string(String p_axis) {
 	for (int i = 0; i < JOY_AXIS_MAX; i++) {
-		if (p_axis == _axes[i]) {
+		if (_axes[i] == nullptr) {
+			break;
+		}
+		if (p_axis == String(_axes[i])) {
 			return i;
 		}
 	}
-	ERR_FAIL_V(-1);
+	ERR_FAIL_V_MSG(-1, vformat("Could not find an axis index matching the string \"%s\".", p_axis));
 }

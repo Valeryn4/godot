@@ -172,6 +172,12 @@ uint64_t OS_Unix::get_system_time_msecs() const {
 	return uint64_t(tv_now.tv_sec) * 1000 + uint64_t(tv_now.tv_usec) / 1000;
 }
 
+double OS_Unix::get_subsecond_unix_time() const {
+	struct timeval tv_now;
+	gettimeofday(&tv_now, nullptr);
+	return (double)tv_now.tv_sec + double(tv_now.tv_usec) / 1000000;
+}
+
 OS::Date OS_Unix::get_date(bool utc) const {
 	time_t t = time(nullptr);
 	struct tm lt;
@@ -364,6 +370,15 @@ Error OS_Unix::kill(const ProcessID &p_pid) {
 int OS_Unix::get_process_id() const {
 	return getpid();
 };
+
+bool OS_Unix::is_process_running(const ProcessID &p_pid) const {
+	int status = 0;
+	if (waitpid(p_pid, &status, WNOHANG) != 0) {
+		return false;
+	}
+
+	return true;
+}
 
 bool OS_Unix::has_environment(const String &p_var) const {
 	return getenv(p_var.utf8().get_data()) != nullptr;

@@ -45,7 +45,7 @@ class CollisionObject : public Spatial {
 	RID rid;
 
 	struct ShapeData {
-		Object *owner;
+		ObjectID owner_id;
 		Transform xform;
 		struct ShapeBase {
 			RID debug_shape;
@@ -58,7 +58,7 @@ class CollisionObject : public Spatial {
 
 		ShapeData() {
 			disabled = false;
-			owner = nullptr;
+			owner_id = 0;
 		}
 	};
 
@@ -145,4 +145,4 @@ public:
 	~CollisionObject();
 };
 
-#endif // COLLISION_OBJECT__H
+#endif // COLLISION_OBJECT_H

@@ -87,7 +87,7 @@ const GodotInputGamepads = {
 		},
 
 		init: function (onchange) {
-			GodotEventListeners.samples = [];
+			GodotInputGamepads.samples = [];
 			function add(pad) {
 				const guid = GodotInputGamepads.get_guid(pad);
 				const c_id = GodotRuntime.allocString(pad.id);
@@ -533,6 +533,15 @@ const GodotInput = {
 			func(ptr);
 			GodotRuntime.free(ptr);
 		}, false);
+	},
+
+	godot_js_input_vibrate_handheld__sig: 'vi',
+	godot_js_input_vibrate_handheld: function (p_duration_ms) {
+		if (typeof navigator.vibrate !== 'function') {
+			GodotRuntime.print('This browser does not support vibration.');
+		} else {
+			navigator.vibrate(p_duration_ms);
+		}
 	},
 };
 

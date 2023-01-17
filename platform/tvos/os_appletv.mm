@@ -206,7 +206,7 @@ bool OSAppleTV::iterate() {
 	if (!main_loop) {
 		return true;
 	}
-
+	input->flush_buffered_events();
 	return Main::iteration();
 };
 
